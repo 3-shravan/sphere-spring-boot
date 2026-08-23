@@ -9,16 +9,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-/**
- * CORS behavior ported from the Node source (server/src/config/cors.js):
- * an explicit origin whitelist (client URL + the two local dev origins),
- * credentials allowed, all standard methods/headers.
- *
- * The Node app additionally allowed *no-origin* requests (server-to-server,
- * curl, mobile apps) through unconditionally — same-origin/tooling requests
- * never send an Origin header, so Spring's CORS layer (which only applies to
- * requests that DO send Origin) already matches that behavior without extra code.
- */
+
 @Configuration
 public class CorsConfig {
 

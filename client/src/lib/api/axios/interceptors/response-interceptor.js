@@ -1,9 +1,13 @@
 import { handleAuthError } from "../handlers/auth-error-handler"
 import { normalizeError } from "./error-normalizer"
 
-export const responseInterceptor = (response) => response
+export const responseInterceptor = (response) => {
+  console.log("[Axios Response]:", response)
+  return response
+}
 
 export const responseErrorInterceptor = async (error) => {
+  console.error("[Axios Error]:", error)
   const normalized = normalizeError(error)
 
   const { status, type, message } = normalized
@@ -66,12 +70,15 @@ export const responseErrorInterceptor = async (error) => {
     return Promise.reject({
       status,
       type,
-      message: "Server error. Please try later.",
+      message: message || "Server error. Please try later.",
     })
   }
 
   // -----------------------------------------
   // FALLBACK / UNKNOWN
   // -----------------------------------------
+  if (!normalized.message) {
+    normalized.message = "Unexpected server error."
+  }
   return Promise.reject(normalized)
 }

@@ -106,9 +106,6 @@ public class UserService {
         mutualUsers.forEach(u -> suggestions.add(toSummaryAsUserResponse(u)));
         fallbackUsers.forEach(u -> suggestions.add(toSummaryAsUserResponse(u)));
 
-        if (suggestions.isEmpty()) {
-            throw new NotFoundException("Suggested users are not available currently.");
-        }
         return suggestions;
     }
 

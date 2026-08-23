@@ -11,10 +11,13 @@ export const handleAuthError = () => {
 
   if (logoutHandler) logoutHandler()
 
-  window.location.href = "/login"
+  const currentPath = window.location.pathname;
+  if (currentPath !== "/login" && currentPath !== "/register" && currentPath !== "/") {
+    window.location.href = "/login"
+  }
 
   return {
     type: "Unauthorized",
-    message: "Session expired. Please login again.",
+    message: "Session expired or invalid credentials. Please login again.",
   }
 }

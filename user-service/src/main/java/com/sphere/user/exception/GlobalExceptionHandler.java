@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
                     .map(err -> err.getDefaultMessage())
                     .orElse("Validation error");
         }
-        return respond(HttpStatus.UNPROCESSABLE_ENTITY, ErrorType.ValidationError.name(), firstMessage);
+        return respond(HttpStatus.UNPROCESSABLE_CONTENT, ErrorType.ValidationError.name(), firstMessage);
     }
 
     // Postgres unique-constraint violation — equivalent to Mongo's

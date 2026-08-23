@@ -25,12 +25,12 @@ const PostGrid = ({
 
   return (
     <div className="w-full columns-2 xs:columns-2 gap-5 sm:columns-2 md:columns-3 lg:columns-3">
-      {posts.length === 0 || !posts[0] ? (
+      {posts?.length === 0 || !posts[0] ? (
         <span className="px-0.5 font-medium text-neutral-500 uppercase tracking-tighter">
           {emptyText}
         </span>
       ) : (
-        posts.map((post) => (
+        posts?.map((post) => (
           <div
             key={post._id}
             className="relative mb-4 cursor-pointer break-inside-avoid overflow-hidden rounded-4xl border shadow"

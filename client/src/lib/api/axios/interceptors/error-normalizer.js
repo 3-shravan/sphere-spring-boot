@@ -2,7 +2,7 @@ export const normalizeError = (error) => {
   const res = error?.response
   const status = res?.status
   const type = res?.data?.type
-  const backendMsg = res?.data?.message
+  const backendMsg = res?.data?.message || res?.data?.error
 
   // Network-level errors
   if (error.code === "ECONNABORTED" || error.message.includes("Network Error"))
@@ -32,7 +32,7 @@ export const normalizeError = (error) => {
   return {
     status,
     type: type || "Unknown",
-    message: backendMsg || "Unexpected server error.",
+    message: backendMsg,
     raw: res?.data,
   }
 }

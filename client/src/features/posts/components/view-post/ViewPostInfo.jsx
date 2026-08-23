@@ -56,9 +56,9 @@ export default function ViewPostInfo({ postId, post, setShowModal }) {
         <ShowTags tags={post?.tags} />
 
         <div className="flex items-center justify-between gap-4 px-2">
-          <LikePost postId={post?._id} likes={post?.likes} />
+          <LikePost postId={post?.id || post?._id} likesCount={post?.likesCount} isLiked={post?.likedByCurrentUser} recentLikers={post?.recentLikers} />
           <div className="flex flex-col gap-2">
-            <SavePost postId={post?._id} />
+            <SavePost postId={post?.id || post?._id} isSaved={post?.isSaved} />
             <Button
               variant="outline"
               className="hidden cursor-pointer text-xs md:block"
@@ -68,7 +68,7 @@ export default function ViewPostInfo({ postId, post, setShowModal }) {
             </Button>
           </div>
         </div>
-        <Comments postId={post?._id} expanded={true} />
+        <Comments postId={post?.id || post?._id} expanded={true} />
       </div>
     </div>
   )

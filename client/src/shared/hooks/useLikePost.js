@@ -2,14 +2,15 @@ import { useState } from "react"
 import { useAuth } from "@/context"
 import { useToggleLikePost } from "../api/useMutations"
 
-const useLikePost = (postId, initialLikes = []) => {
+const useLikePost = (postId, initialLikesCount = 0, initialIsLiked = false, initialRecentLikers = []) => {
   const { currentUserId, auth } = useAuth()
 
-  const [likes, setLikes] = useState(initialLikes)
-  const [likesCount, setLikesCount] = useState(initialLikes.length)
-  const [isLiked, setIsLiked] = useState(initialLikes.some((u) => u._id === currentUserId))
+  const [likesCount, setLikesCount] = useState(initialLikesCount)
+  const [isLiked, setIsLiked] = useState(initialIsLiked)
+  const [recentLikers, setRecentLikers] = useState(initialRecentLikers)
 
   const newUser = {
+    id: currentUserId,
     _id: currentUserId,
     name: auth?.profile?.name,
     profilePicture: auth?.profile?.profilePicture,
@@ -18,39 +19,32 @@ const useLikePost = (postId, initialLikes = []) => {
   const { mutate: toggleLike, isPending: likeIsPending } = useToggleLikePost(postId, {
     onMutate: () => {
       setIsLiked((prev) => !prev)
-
       if (isLiked) {
-        // Remove current user
-        setLikes((prev) => prev.filter((u) => u._id !== currentUserId))
-        setLikesCount((count) => count - 1)
+        setRecentLikers((prev) => prev.filter((u) => u.id !== currentUserId && u._id !== currentUserId))
+        setLikesCount((prev) => Math.max(0, prev - 1))
       } else {
-        // Add current user at the start
-        setLikes((prev) => [newUser, ...prev.filter((u) => u._id !== currentUserId)])
-        setLikesCount((count) => count + 1)
+        setRecentLikers((prev) => [newUser, ...prev.filter((u) => u.id !== currentUserId && u._id !== currentUserId)].slice(0, 3))
+        setLikesCount((prev) => prev + 1)
       }
     },
     onError: () => {
-      // Rollback on error
       setIsLiked((prev) => !prev)
-
       if (isLiked) {
-        setLikes((prev) => [newUser, ...prev.filter((u) => u._id !== currentUserId)])
-        setLikesCount((count) => count + 1)
+        setRecentLikers((prev) => [newUser, ...prev.filter((u) => u.id !== currentUserId && u._id !== currentUserId)].slice(0, 3))
+        setLikesCount((prev) => prev + 1)
       } else {
-        // Was not liked, rollback add
-        setLikes((prev) => prev.filter((u) => u._id !== currentUserId))
-        setLikesCount((count) => count - 1)
+        setRecentLikers((prev) => prev.filter((u) => u.id !== currentUserId && u._id !== currentUserId))
+        setLikesCount((prev) => Math.max(0, prev - 1))
       }
     },
   })
 
   return {
     toggleLike,
-    likes,
     likesCount,
     isLiked,
+    recentLikers,
     likeIsPending,
-    setLikes,
     setLikesCount,
   }
 }

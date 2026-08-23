@@ -20,11 +20,11 @@ const PostCard = ({ post }) => {
       <PostCardMedia media={post?.media} thoughts={post?.thoughts} likePostRef={likePostRef} />
 
       <div className="flex-between px-2">
-        <LikePost postId={post._id} likes={post.likes} ref={likePostRef} />
-        <SavePost postId={post._id} />
+        <LikePost postId={post.id || post._id} likesCount={post.likesCount} isLiked={post.likedByCurrentUser} recentLikers={post.recentLikers} ref={likePostRef} />
+        <SavePost postId={post.id || post._id} isSaved={post.isSaved} />
       </div>
 
-      <Comments postId={post?._id} />
+      <Comments postId={post?.id || post?._id} />
     </div>
   )
 }

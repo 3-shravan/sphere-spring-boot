@@ -19,7 +19,8 @@ SERVICES=(
   "discovery-service"
   "api-gateway"
   "user-service"
-  # "post-service"
+  "post-service"
+  "notification-service"
 )
 
 PID_FILE="$REPO_ROOT/.service_pids"
@@ -37,7 +38,7 @@ function stop() {
   fi
   
   # Fallback: kill processes running on known ports just to be perfectly fresh
-  for port in 8761 8080 8081 8082; do
+  for port in 8761 8080 8081 8082 8083; do
     PIDS=$(lsof -t -i:$port 2>/dev/null)
     if [ ! -z "$PIDS" ]; then
       for pid in $PIDS; do

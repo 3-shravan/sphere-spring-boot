@@ -1,5 +1,7 @@
 server:
-  port: ${USER_SERVICE_PORT:8081}
+  port: ${USER_SERVICE_PORT}
+  error:
+    include-message: always
 
 spring:
   application:
@@ -7,7 +9,9 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
-    import: optional:file:.env[.properties]
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:user-service/.env[.properties]
 
   # datasource (PostgreSQL)
   datasource:
@@ -56,6 +60,8 @@ sphere:
   jwt:
     secret: ${JWT_SECRET}
     expiration-seconds: ${JWT_EXPIRE_SECONDS} # 7 days, matches typical JWT_EXPIRE from source's config.env
+  internal:
+    api-key: ${INTERNAL_API_SECRET:default-secret}
   client-url: ${CLIENT_URL}
   mail:
     from: ${FROM_EMAIL}
@@ -67,7 +73,7 @@ sphere:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+      defaultZone: ${EUREKA_URI}
     fetch-registry: true
     register-with-eureka: true
   instance:

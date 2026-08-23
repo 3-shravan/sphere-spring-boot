@@ -4,26 +4,48 @@ server:
 spring:
   application:
     name: api-gateway
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:api-gateway/.env[.properties]
   cloud:
     gateway:
-      # We handle CORS ourselves via CorsWebFilter (see config.CorsConfig) so
-      # that origin-checking logic mirrors the Node whitelist exactly instead
-      # of relying on globalcors YAML matching semantics.
       routes:
         - id: user-service-auth
-          uri: lb://USER-SERVICE
+          uri: lb://user-service
           predicates:
             - Path=/api/v1/auth/**
 
         - id: user-service-users
-          uri: lb://USER-SERVICE
+          uri: lb://user-service
           predicates:
             - Path=/api/v1/users/**
 
         - id: post-service-posts
-          uri: lb://POST-SERVICE
+          uri: lb://post-service
           predicates:
             - Path=/api/v1/posts/**
+
+        - id: user-service-docs
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/v3/api-docs
+          filters:
+            - RewritePath=/user-service/v3/api-docs, /v3/api-docs
+
+        - id: post-service-docs
+          uri: lb://post-service
+          predicates:
+            - Path=/post-service/v3/api-docs
+          filters:
+            - RewritePath=/post-service/v3/api-docs, /v3/api-docs
+
+        - id: notification-service-docs
+          uri: lb://notification-service
+          predicates:
+            - Path=/notification-service/v3/api-docs
+          filters:
+            - RewritePath=/notification-service/v3/api-docs, /v3/api-docs
 
         # NOTE: no route is defined for /api/v1/chats/** — chat is explicitly
         # excluded from this migration (docs/exclusions/CHAT_EXCLUDED.md).
@@ -34,7 +56,7 @@ spring:
 sphere:
   cors:
     client-url: ${CLIENT_URL}
-    production-client-url: ${PRODUCTION_CLIENT_URL}
+    production-client-url: ${PRODUCTION_CLIENT_URL:}
 
 eureka:
   client:
@@ -42,6 +64,7 @@ eureka:
       defaultZone: ${EUREKA_URI}
     fetch-registry: true
     register-with-eureka: true
+    registry-fetch-interval-seconds: 5
   instance:
     prefer-ip-address: true
 
@@ -59,3 +82,17 @@ management:
 logging:
   level:
     org.springframework.cloud.gateway: INFO
+    org.springframework.cloud.loadbalancer: INFO
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: User Service
+        url: /user-service/v3/api-docs
+      - name: Post Service
+        url: /post-service/v3/api-docs
+      - name: Notification Service
+        url: /notification-service/v3/api-docs     
+
+        

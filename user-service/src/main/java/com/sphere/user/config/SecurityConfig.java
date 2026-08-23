@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sphere.user.dto.response.ErrorResponse;
 import com.sphere.user.exception.ErrorType;
+import com.sphere.user.security.InternalApiKeyFilter;
 import com.sphere.user.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final InternalApiKeyFilter internalApiKeyFilter;
     private final ObjectMapper objectMapper;
 
     @Bean
@@ -83,6 +85,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(this::handleUnauthenticated))
+                .addFilterBefore(internalApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
