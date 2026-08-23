@@ -1,0 +1,37 @@
+server:
+  port: ${DISCOVERY_PORT}
+
+spring:
+  application:
+    name: discovery-service
+
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME}
+  client:
+    # This node is the registry itself — it does not need to register with
+    # or fetch a registry from another Eureka instance in local/single-node dev.
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # Disable self-preservation in local/dev so stale service instances are
+    # evicted promptly instead of being kept around after ungraceful shutdowns.
+    # Re-enable (or leave default=true) in production multi-node setups.
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION}
+    eviction-interval-timer-in-ms: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN

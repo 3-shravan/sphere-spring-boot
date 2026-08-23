@@ -1,0 +1,91 @@
+version: "3.9"
+
+# Sphere backend — local development compose file.
+# Services are added here incrementally as they're implemented and accepted,
+# per the one-service-at-a-time migration workflow.
+
+services:
+  discovery-service:
+    build: ./discovery-service
+    container_name: sphere-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_SELF_PRESERVATION: "false"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: sphere-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:5173}
+      PRODUCTION_CLIENT_URL: ${PRODUCTION_CLIENT_URL:-}
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+
+  # postgres, user-service, post-service etc. will be added here as each
+  # service is implemented and accepted.
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sphere-postgres
+    environment:
+      # NOTE: standard postgres image only auto-creates ONE database via
+      # POSTGRES_DB. When post-service is added, either give it a second
+      # postgres container (simplest, matches "each service owns its DB")
+      # or add an init script here that runs `CREATE DATABASE sphere_posts`.
+      # Not solved yet — flagged for when post-service starts, not decided silently.
+      POSTGRES_DB: sphere_users
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - sphere-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build: ./user-service
+    container_name: sphere-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/sphere_users
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_EXPIRE_SECONDS: ${JWT_EXPIRE_SECONDS:-604800}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:5173}
+      FROM_EMAIL: ${FROM_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_MAIL: ${SMTP_MAIL:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+
+networks:
+  default:
+    name: sphere-network
+
+volumes:
+  sphere-pg-data:

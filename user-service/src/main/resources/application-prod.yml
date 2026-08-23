@@ -1,0 +1,11 @@
+spring:
+  jpa:
+    show-sql: false
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+
+logging:
+  level:
+    com.sphere.user: WARN
+    org.hibernate.SQL: WARN

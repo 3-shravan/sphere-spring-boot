@@ -1,0 +1,61 @@
+server:
+  port: ${GATEWAY_PORT}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      # We handle CORS ourselves via CorsWebFilter (see config.CorsConfig) so
+      # that origin-checking logic mirrors the Node whitelist exactly instead
+      # of relying on globalcors YAML matching semantics.
+      routes:
+        - id: user-service-auth
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/v1/auth/**
+
+        - id: user-service-users
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/v1/users/**
+
+        - id: post-service-posts
+          uri: lb://POST-SERVICE
+          predicates:
+            - Path=/api/v1/posts/**
+
+        # NOTE: no route is defined for /api/v1/chats/** — chat is explicitly
+        # excluded from this migration (docs/exclusions/CHAT_EXCLUDED.md).
+        # Requests to /api/v1/chats/** will 404 at the gateway until Decision
+        # #3 (docs/decisions/DECISIONS_REQUIRED.md) is resolved: either route
+        # this prefix to the legacy Node server, or leave it unrouted.
+
+sphere:
+  cors:
+    client-url: ${CLIENT_URL}
+    production-client-url: ${PRODUCTION_CLIENT_URL}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

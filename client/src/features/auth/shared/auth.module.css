@@ -1,0 +1,295 @@
+.inputField:-webkit-autofill {
+  font-family: "Gilroy" !important;
+  font-size: 0.8rem !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0 50px black inset !important;
+  -webkit-text-fill-color: white !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.space4vh {
+  background-color: transparent;
+  height: 1vh;
+  z-index: -100;
+}
+.space1vh {
+  background-color: transparent;
+  height: 1vh;
+  z-index: -100;
+}
+
+.backIcon {
+  border: none;
+  border-radius: 50px;
+  padding: 4px;
+  transition: 0.2s all ease-in-out;
+  &:hover {
+    background-color: #131313;
+  }
+}
+
+.heading1 {
+  font-size: 1.8rem;
+  text-align: start;
+  height: 8vh;
+  font-family: "Futura";
+  color: var(--color-accent);
+}
+.heading2 {
+  text-align: start;
+  height: 7vh;
+  line-height: 1.5rem;
+  font-size: 1.5rem;
+  font-family: "Gilroy";
+  font-weight: bold;
+  color: #414141;
+}
+
+.inputName {
+  font-size: 0.9rem;
+  text-align: left;
+  line-height: 1rem;
+  margin-top: 4vh;
+  padding-left: 0.2vw;
+  font-family: "Gilroy";
+  font-weight: bold;
+  color: var(--forest-green);
+}
+
+.inputWrapper {
+  display: flex;
+  margin-top: 0.5rem;
+  align-items: center;
+  border-radius: 50px;
+  position: relative;
+}
+
+.inputField {
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Gilroy";
+  font-weight: 400;
+  width: 100%;
+  border-radius: 50px;
+  padding: 0.8rem 3rem;
+  border: 1px solid #414141;
+  transition: all 0.3s ease-in-out;
+  caret-color: var(--white);
+}
+
+.inputField:focus {
+  outline: none;
+  border: 1px solid var(--forest-green);
+}
+
+.selectionContainer {
+  display: flex;
+  justify-content: space-between;
+  width: 35%;
+  gap: 1.5rem;
+}
+
+.selectionButton {
+  font-family: "Gilroy";
+  margin-top: 1.5vh;
+  padding-top: 0.5vh;
+  font-size: 0.8rem;
+  cursor: pointer;
+  flex-grow: 1;
+  text-align: center;
+  transition: 0.2s all ease-out;
+  &:hover {
+    color: var(--subtle-text-hover);
+  }
+}
+
+.selectionButton.active {
+  border-top: 1px solid var(--forest-green);
+}
+
+.emailphone {
+  font-size: 0.9rem;
+}
+
+.spanLine {
+  font-size: 0.7rem;
+  font-family: "Gilroy";
+  font-weight: 400;
+  text-align: start;
+  width: 5rem;
+  cursor: default;
+  padding: 0 0 0.2rem 0;
+  text-decoration: underline;
+  color: var(--subtle-text);
+  &:hover {
+    text-decoration: underline;
+    color: var(--subtle-text-hover);
+    cursor: pointer;
+  }
+}
+
+/* REDIRECT
+@ *******************
+@********************
+*/
+
+.secondaryButton {
+  border: 0.1px solid rgb(65, 65, 65);
+  display: flex;
+  color: #6c6c6c;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  padding: 0.7rem 1rem;
+  width: 100%;
+  margin: 0.8vh 0 1.5vh 0;
+  font-size: 0.75rem;
+  font-family: "Gilroy";
+  font-weight: bold;
+  border-radius: 30px;
+  cursor: pointer;
+  transition:
+    all 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
+  &:hover {
+    background-color: #000000;
+    color: #3e3e3e;
+    text-decoration: underline;
+  }
+}
+
+.redirectLine {
+  font-family: "Gilroy";
+  font-weight: 400;
+  cursor: default;
+  flex-direction: column;
+  color: var(--subtle-text);
+  font-size: 0.7rem;
+}
+
+.redirectLink {
+  color: var(--color-accent);
+  font-family: "Gilroy";
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-size: 0.7rem;
+  &:hover {
+    text-decoration: underline;
+    color: var(--subtle-text-hover);
+    transition: 0.1s all ease-in-out;
+  }
+}
+
+/* MEDIA QUERIES  
+@******************
+@******************
+@******************  
+-------------------- */
+@media (max-width: 1024px) {
+  .heading1 {
+    font-size: 1.9rem;
+  }
+
+  .heading2 {
+    font-size: 1.5rem;
+  }
+
+  .inputName {
+    font-size: 1rem;
+  }
+
+  .redirectLine {
+    font-size: 0.8rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .secondaryButton,
+  .inputField {
+    font-size: 1rem;
+    padding: 0.6rem 2.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .heading1 {
+    font-size: 1.8rem;
+  }
+
+  .heading2 {
+    font-size: 1.4rem;
+  }
+
+  .inputName {
+    font-size: 0.9rem;
+  }
+
+  .redirectLine {
+    font-size: 0.8rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .spanLine {
+    margin: 0.3rem 0;
+  }
+
+  .selectionContainer {
+    width: 50%;
+    gap: 1rem;
+  }
+
+  .secondaryButton,
+  .inputField {
+    font-size: 0.8rem;
+    padding: 0.8rem 2.6rem;
+  }
+
+  .selectionButton {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .heading1 {
+    font-size: 2.5rem;
+    line-height: 2.3rem;
+  }
+
+  .heading2 {
+    font-size: 1.5rem;
+    margin-top: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .inputName {
+    font-size: 1rem;
+    margin-top: 1rem;
+  }
+
+  .redirectLine {
+    font-size: 0.9rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .spanLine {
+    margin: 0.7rem 0;
+  }
+
+  .selectionContainer {
+    width: 80%;
+    gap: 0.8rem;
+  }
+
+  .secondaryButton,
+  .inputField {
+    font-size: 1rem;
+    padding: 0.8rem 2.7rem;
+  }
+
+  .selectionButton {
+    font-size: 0.8rem;
+  }
+}

@@ -1,0 +1,10 @@
+.sonner-container {
+  width: 30%;
+  font-family: "Gilroy-Medium", "Gilroy", "Poppins";
+}
+
+@media screen and (max-width: 600px) {
+  .sonner-container {
+    width: 100%;
+  }
+}

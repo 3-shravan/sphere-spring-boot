@@ -1,0 +1,27 @@
+import "./authButton.css"
+
+const AuthButton = ({ handleNext, text, type, loading, register, icon }) => {
+  return (
+    <div>
+      <button
+        type={type}
+        className={register ? "btn registerAuthButton" : "btn authButton"}
+        onClick={handleNext}
+        disabled={loading}
+      >
+        {loading ? (
+          <span className={register ? "authLoader" : "loginAuthLoader"}></span>
+        ) : (
+          <>
+            <span className="btninput">
+              {text}
+              <span className="flex pt-0.5 font-bold text-2xl">{icon}</span>
+            </span>
+          </>
+        )}
+      </button>
+    </div>
+  )
+}
+
+export default AuthButton

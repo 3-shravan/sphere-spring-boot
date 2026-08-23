@@ -1,0 +1,312 @@
+/** biome-ignore-all lint/suspicious/noUnknownAtRules: <reason> */
+/** biome-ignore-all lint/complexity/noImportantStyles: <reason> */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Poppins", "Gilroy", "Gill Sans MT", Calibri, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.stroke-outline-text {
+  font-family: "Poppins", sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.09em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(129, 52, 245);
+  user-select: none;
+  white-space: nowrap;
+  line-height: 1;
+  pointer-events: none;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.no-text-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.text-auto-contrast {
+  mix-blend-mode: difference;
+  color: white;
+}
+
+:root {
+  --color-accent: rgb(228, 228, 171);
+  --subtle-text: #6c6c6c;
+  --subtle-text-hover: #3e3e3e;
+  --green: #007550;
+  --forest-green: #16483b;
+  --forest-dark-green: #061f17;
+
+  --first: oklch(0.81 0.117 11.638);
+  --second: oklch(0.712 0.194 13.428);
+  --third: oklch(0.645 0.246 16.439);
+
+  --gradient-bg-green: rgba(19, 133, 105, 0.788);
+  --gradient-bg-text: rgba(6, 27, 18, 0.194);
+
+  --base: white;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.975 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+
+  --scrollbar-track: var(--background);
+  --scrollbar-thumb: #909090;
+  --scrollbar-thumb-hover: #b7b7b7;
+}
+.dark {
+  --base: black;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.2 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+
+  --scrollbar-track: var(--background);
+  --scrollbar-thumb: #474747;
+  --scrollbar-thumb-hover: #777;
+}
+
+@theme inline {
+  --font-Gilroy: "Gilroy", sans-serif;
+  --font-Futura: "Futura", sans-serif;
+  --font-mono: monospace;
+  --font-blackout: "Blackout-Midnight", sans-serif;
+  --font-Poppins: "Poppins", sans-serif;
+
+  --color-first: var(--first);
+  --color-second: var(--second);
+  --color-third: var(--third);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-base: var(--base);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer utilities {
+  .border {
+    @apply border-border border md:border-[1.5px] rounded-xl box-border;
+  }
+  .flex-center {
+    @apply flex justify-center items-center;
+  }
+  .flex-between {
+    @apply flex justify-between items-center;
+  }
+  .no-focus {
+    @apply focus:outline-none focus:ring-0 focus-visible:ring-0 border-none;
+  }
+  .input {
+    @apply font-Gilroy font-bold bg-input/30;
+  }
+  .sidebar {
+    @apply md:w-full lg:w-auto lg:min-w-[14vw] lg:max-w-[24vw];
+  }
+  .home-page {
+    @apply flex flex-col w-full flex-1 overflow-hidden lg:rounded-3xl m-1.5 md:m-3 md:border-[1.5px] md:border-border;
+  }
+  .home-page-section {
+    @apply hidden lg:flex ml-2 flex-col gap-5 pt-2 pl-0 mr-4.5 w-full;
+  }
+  .feed {
+    @apply h-[94svh] pb-30 lg:pb-15 md:pb-8 px-1 md:pl-4.5 lg:min-w-[49vw];
+  }
+  .post-card {
+    @apply bg-card text-card-foreground rounded-2xl px-2 py-4 md:px-6 lg:p-4 lg:max-w-[47vw] space-y-1;
+  }
+  .image-max {
+    @apply md:max-w-[48vw] lg:max-w-[35vw];
+  }
+  .btn-base {
+    @apply flex items-center p-1 cursor-pointer transition hover:scale-90 duration-200  gap-1 pr-3 rounded-full;
+  }
+  .update-input-label {
+    @apply text-xs text-rose-400 font-Gilroy font-semibold px-1;
+  }
+  .caption {
+    @apply text-xs font-Futura text-rose-400 dark:text-first px-3 mt-6 cursor-pointer;
+  }
+  .tags {
+    @apply inline-block mr-1 font-Gilroy  text-muted-foreground px-2 py-1 bg-muted-foreground/10 rounded-full text-xs;
+  }
+  .reply-action-btn {
+    @apply font-Gilroy flex cursor-pointer items-center gap-1 justify-center text-muted-foreground px-2 py-1 bg-muted-foreground/10 rounded-full text-[10px] hover:bg-muted-foreground/20 transition;
+  }
+}
+
+@font-face {
+  font-family: "Gilroy";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/Gilroy-Regular.woff") format("woff");
+}
+@font-face {
+  font-family: "Gilroy";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/Gilroy-Bold.woff") format("woff");
+}
+@font-face {
+  font-family: "Futura";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/Futura-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Blackout-Midnight";
+  src:
+    url("/fonts/Blackout-Midnight.woff2") format("woff2"),
+    url("/fonts/Blackout-Midnight.woff") format("woff");
+}
+
+::selection {
+  background-color: #2e2e2e;
+  color: #fbfbfb;
+}
+::-webkit-scrollbar {
+  width: 1.5px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 50px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.inputField:-webkit-autofill {
+  font-family:
+    "Gilroy", "Poppins", "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif !important;
+  font-weight: 400 !important;
+  font-size: 0.9rem !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0 50px rgb(0, 0, 0) inset !important;
+  -webkit-text-fill-color: rgb(255, 255, 255) !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.animate-[popBounce_1s_ease-out] {
+  animation: popBounce 1s ease-out forwards;
+}
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes popBounce {
+  0% {
+    transform: scale(0) rotate(-20deg);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.8) rotate(10deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.4) rotate(-5deg);
+  }
+  80% {
+    transform: scale(1.6) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes matrixFall {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translateY(120vh);
+    opacity: 1;
+  }
+}
+
+.animate-matrix {
+  animation: matrixFall 3.5s linear infinite;
+}
