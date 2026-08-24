@@ -1,41 +1,79 @@
+# ============================================================================
+# SERVER CONFIGURATION
+# ============================================================================
 server:
   port: ${POST_SERVICE_PORT}
+  servlet:
+    context-path: /
 
+# ============================================================================
+# SPRING BOOT APPLICATION CONFIGURATION
+# ============================================================================
 spring:
+  # Disable Spring Boot banner for cleaner logs
+  main:
+    banner-mode: off
+
+  # Enable ANSI colored output for console logs
+  output:
+    ansi:
+      enabled: always
+
+  # Application identification
   application:
-    name: POST-SERVICE
+    name: post-service
+
+  # Environment-specific profiles
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Environment file imports
   config:
     import:
       - optional:file:.env[.properties]
       - optional:file:post-service/.env[.properties]
 
+  # API error response configuration
+  web:
+    error:
+      include-message: always # Always include error message in response
+      include-stacktrace: never # NEVER expose stack traces (security best practice)
+
+  # Database configuration
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
 
+  # JPA/Hibernate configuration
   jpa:
-    open-in-view: false
+    open-in-view: false # Prevent lazy loading in views (performance best practice)
     hibernate:
-      ddl-auto: validate # Flyway owns the schema — see master prompt §3
+      ddl-auto: validate # Never auto-generate schema in production (Flyway owns the schema)
     properties:
       hibernate:
-        format_sql: false
+        format_sql: false # Disable SQL formatting (logging requirement)
+        generate_statistics: false # Disable statistics generation
 
+  # Flyway database migration
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+    clean-disabled: true # NEVER enable clean in production
 
+  # File upload configuration
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
 
+  # Cloud integrations
   cloud:
     openfeign:
       circuitbreaker:
@@ -51,16 +89,24 @@ sphere:
     api-key: ${CLOUDINARY_API_KEY:}
     api-secret: ${CLOUDINARY_API_SECRET:}
 
+# ============================================================================
+# SERVICE DISCOVERY (EUREKA)
+# ============================================================================
 eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URI}
     fetch-registry: true
     register-with-eureka: true
+    registry-fetch-interval-seconds: 5
   instance:
     prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
 
-
+# ============================================================================
+# FEIGN CLIENT CONFIGURATION
+# ============================================================================
 feign:
   client:
     config:
@@ -82,21 +128,72 @@ resilience4j:
       USER-SERVICE:
         timeout-duration: 4s
 
+# ============================================================================
+# MANAGEMENT & ACTUATOR ENDPOINTS
+# ============================================================================
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info # Expose only essential endpoints
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: when-authorized # Show details only for authorized users
       probes:
-        enabled: true
+        enabled: true # Enable liveness and readiness probes (Kubernetes)
 
+# ============================================================================
+# SPRINGDOC/OPENAPI CONFIGURATION
+# ============================================================================
 springdoc:
+  api-docs:
+    enabled: true # Enable API documentation endpoint
+    path: /v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    enabled: true # Enable Swagger UI
+    path: /swagger-ui.html # Configurable Swagger UI path
+    operations-sorter: method # Sort operations by HTTP method
+    tags-sorter: alpha # Sort tags alphabetically
+    use-root-path: false # Use full path, not root
 
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
 logging:
+  # Logging pattern: concise, colorful, developer-friendly
+  # Format: [TIME] [LEVEL] [LOGGER] - MESSAGE
+  pattern:
+    console: "%clr(%d{HH:mm}){magenta} %highlight(%-5level) %clr(%logger{30}){green} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{30} - %msg%n"
+
+  # Logging levels configuration
   level:
-    com.sphere.post: INFO
+    # Root logger level
+    root: INFO
+
+    # Spring Framework logging (WARN to reduce noise)
+    org.springframework: WARN
+    org.springframework.web: WARN
+    org.springframework.cloud: WARN
+    org.springframework.boot: WARN
+
+    # Hibernate/JPA logging (WARN to reduce noise)
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+
+    # Tomcat container logging (WARN to reduce noise)
+    org.apache.catalina: WARN
+    org.apache.coyote: WARN
+
+    # Database connection pool logging
+    com.zaxxer.hikari: WARN
+
+    # Netflix/Eureka service discovery logging
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN
+
+    # SpringDoc/OpenAPI logging (ERROR to suppress startup warnings)
+    org.springdoc: ERROR
+
+    # Application-specific logging (DEBUG for development)
+    com.sphere: DEBUG
