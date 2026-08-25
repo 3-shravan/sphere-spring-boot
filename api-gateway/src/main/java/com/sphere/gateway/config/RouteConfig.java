@@ -26,6 +26,11 @@ public class RouteConfig {
                 .route("notification-service-docs", r -> r.path("/notification-service/v3/api-docs")
                         .filters(f -> f.rewritePath("/notification-service/v3/api-docs", "/v3/api-docs"))
                         .uri("lb://NOTIFICATION-SERVICE"))
+                .route("ai-service", r -> r.path("/api/v1/ai/**")
+                        .uri("lb://AI-SERVICE"))
+                .route("ai-service-docs", r -> r.path("/ai-service/v3/api-docs")
+                        .filters(f -> f.rewritePath("/ai-service/v3/api-docs", "/v3/api-docs"))
+                        .uri("lb://AI-SERVICE"))
                 .build();
     }
 }

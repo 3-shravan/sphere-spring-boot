@@ -73,6 +73,18 @@ spring:
           filters:
             - RewritePath=/notification-service/v3/api-docs, /v3/api-docs
 
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/v1/ai/**
+
+        - id: ai-service-docs
+          uri: lb://ai-service
+          predicates:
+            - Path=/ai-service/v3/api-docs
+          filters:
+            - RewritePath=/ai-service/v3/api-docs, /v3/api-docs
+
 # ============================================================================
 # SPHERE-SPECIFIC CONFIGURATION
 # ============================================================================
@@ -92,7 +104,7 @@ eureka:
     register-with-eureka: true
     registry-fetch-interval-seconds: 5
   instance:
-    prefer-ip-address: true
+    hostname: localhost
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
 

@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.sphere.post.client.AiServiceClient;
 import com.sphere.post.client.AuthorSummary;
 import com.sphere.post.client.UserServiceClient;
 import com.sphere.post.dto.request.CreatePostRequest;
@@ -46,6 +47,7 @@ public class PostService {
     private final SavedPostRepository savedPostRepository;
     private final CommentRepository commentRepository;
     private final UserServiceClient userServiceClient;
+    private final AiServiceClient aiServiceClient;
     private final CloudinaryService cloudinaryService;
     private final NotificationPublisher notificationPublisher;
     private final Gson gson = new Gson();
@@ -76,14 +78,16 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public FeedPageResponse getMyPosts(Long currentUserId, int page, int limit) {
-        Page<Post> result = postRepository.findByAuthorIdOrderByCreatedAtDesc(currentUserId, PageRequest.of(page - 1, limit));
+        Page<Post> result = postRepository.findByAuthorIdOrderByCreatedAtDesc(currentUserId,
+                PageRequest.of(page - 1, limit));
         return toFeedPage(result, currentUserId);
     }
 
     @Transactional(readOnly = true)
     public List<PostResponse> getSavedPosts(Long currentUserId) {
         List<Long> postIds = savedPostRepository.findPostIdsByUserId(currentUserId);
-        if (postIds.isEmpty()) return List.of();
+        if (postIds.isEmpty())
+            return List.of();
         List<Post> posts = postRepository.findAllById(postIds);
         // Preserve savedPosts ordering (most-recently-saved first), matching source.
         posts.sort((a, b) -> Integer.compare(postIds.indexOf(a.getId()), postIds.indexOf(b.getId())));
@@ -122,6 +126,9 @@ public class PostService {
                 .build();
 
         postRepository.save(post);
+        // Warm the AI caption cache in the background (best-effort).
+        // If ai-service is down the fallback returns null and we continue.
+        warmAiCaptionCache(uploaded.url());
         return toPostResponse(post, currentUserId);
     }
 
@@ -143,7 +150,8 @@ public class PostService {
     }
 
     @Transactional
-    public UpdatePostResult updatePost(Long currentUserId, Long postId, UpdatePostRequest request, MultipartFile image) {
+    public UpdatePostResult updatePost(Long currentUserId, Long postId, UpdatePostRequest request,
+            MultipartFile image) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new NotFoundException("Post not found"));
         if (!post.getAuthorId().equals(currentUserId)) {
             throw new NotFoundException("Post not found"); // matches source: same 404 for not-found and not-owner
@@ -172,9 +180,12 @@ public class PostService {
             post.setMediaPublicId(uploaded.publicId());
         }
 
-        if (request.caption() != null) post.setCaption(request.caption());
-        if (request.location() != null) post.setLocation(request.location());
-        if (request.tags() != null) post.setTags(newTags);
+        if (request.caption() != null)
+            post.setCaption(request.caption());
+        if (request.location() != null)
+            post.setLocation(request.location());
+        if (request.tags() != null)
+            post.setTags(newTags);
 
         postRepository.save(post);
         return new UpdatePostResult(toPostResponse(post, currentUserId), true);
@@ -205,7 +216,7 @@ public class PostService {
         boolean alreadyLiked = postLikeRepository.existsByPostIdAndUserId(postId, currentUserId);
         if (alreadyLiked) {
             postLikeRepository.deleteByPostIdAndUserId(postId, currentUserId);
-            
+
             if (post.getRecentLikers() != null) {
                 List<AuthorSummary> likers = new ArrayList<>(post.getRecentLikers());
                 likers.removeIf(l -> l.id().equals(currentUserId));
@@ -222,7 +233,8 @@ public class PostService {
 
         // Add to recentLikers (denormalization)
         AuthorSummary liker = resolveAuthor(currentUserId);
-        List<AuthorSummary> likers = post.getRecentLikers() == null ? new ArrayList<>() : new ArrayList<>(post.getRecentLikers());
+        List<AuthorSummary> likers = post.getRecentLikers() == null ? new ArrayList<>()
+                : new ArrayList<>(post.getRecentLikers());
         likers.removeIf(l -> l.id().equals(currentUserId)); // prevent duplicates if bugged
         likers.add(0, liker); // add to front (most recent)
         if (likers.size() > 3) {
@@ -286,8 +298,10 @@ public class PostService {
     PostResponse toPostResponse(Post post, Long currentUserId) {
         long likes = postLikeRepository.countByPostId(post.getId());
         long comments = commentRepository.countByPostId(post.getId());
-        boolean liked = currentUserId != null && postLikeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
-        Boolean saved = currentUserId != null ? savedPostRepository.existsByUserIdAndPostId(currentUserId, post.getId()) : null;
+        boolean liked = currentUserId != null
+                && postLikeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
+        Boolean saved = currentUserId != null ? savedPostRepository.existsByUserIdAndPostId(currentUserId, post.getId())
+                : null;
 
         return new PostResponse(
                 post.getId(),
@@ -304,12 +318,12 @@ public class PostService {
                 saved,
                 post.getRecentLikers(),
                 post.getCreatedAt(),
-                post.getUpdatedAt()
-        );
+                post.getUpdatedAt());
     }
 
     private List<String> parseTags(String tagsJson) {
-        if (tagsJson == null || tagsJson.isBlank()) return List.of();
+        if (tagsJson == null || tagsJson.isBlank())
+            return List.of();
         try {
             String[] tags = gson.fromJson(tagsJson, String[].class);
             return tags == null ? List.of() : List.of(tags);
@@ -328,5 +342,20 @@ public class PostService {
 
     private boolean eq(Object a, Object b) {
         return java.util.Objects.equals(a, b);
+    }
+
+    /**
+     * Best-effort: warm ai-service caption cache after a post image is uploaded.
+     * Failure is silently swallowed — caption generation never blocks post
+     * creation.
+     */
+    private void warmAiCaptionCache(String imageUrl) {
+        try {
+            aiServiceClient.getCaptionForImage(imageUrl);
+        } catch (Exception e) {
+            // ai-service unavailable or caption generation failed — safe to ignore
+            org.slf4j.LoggerFactory.getLogger(PostService.class)
+                    .warn("AI caption cache warm-up skipped for imageUrl={} reason={}", imageUrl, e.getMessage());
+        }
     }
 }

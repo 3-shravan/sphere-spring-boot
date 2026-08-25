@@ -59,7 +59,7 @@ eureka:
     register-with-eureka: true
     registry-fetch-interval-seconds: 5
   instance:
-    prefer-ip-address: true
+    hostname: localhost
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
 

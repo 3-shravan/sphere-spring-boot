@@ -1,4 +1,4 @@
-import { BadgePlus } from "lucide-react"
+import { BadgePlus, Sparkles } from "lucide-react"
 import { useState } from "react"
 import { SiSparkpost } from "react-icons/si"
 import { useNavigate } from "react-router-dom"
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { errorToast, formatTags, validatePostForm } from "@/utils"
 import { useCreatePost } from "../api/useMutations"
+import { useGenerateCaption } from "../api/useGenerateCaption"
 import { usePostFormState } from "../hooks/useFormState"
 
 const CreatePostForm = () => {
@@ -14,9 +15,11 @@ const CreatePostForm = () => {
   const { preview, setPreview, image, fileInputRef, clearPreview, setImage } = usePostFormState()
 
   const { mutateAsync: createPost, isPending } = useCreatePost()
+  const { generateCaption, isGenerating } = useGenerateCaption()
 
   const [showCropper, setShowCropper] = useState(false)
   const [tempImage, setTempImage] = useState(null)
+  const [caption, setCaption] = useState("")
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0]
@@ -39,15 +42,23 @@ const CreatePostForm = () => {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
+  const handleGenerateCaption = async () => {
+    if (!image) return
+    const generated = await generateCaption(image)
+    if (generated) setCaption(generated)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
     if (image) formData.append("image", image)
 
+    // Use controlled caption value (may have been AI-generated)
+    formData.set("caption", caption)
+
     const tags = formData.get("tags")
     const formattedTags = formatTags(tags)
     formData.delete("tags")
-    // formData.set("tags", JSON.stringify(formattedTags));
     formattedTags.forEach((tag) => {
       formData.append("tags", tag)
     })
@@ -70,12 +81,31 @@ const CreatePostForm = () => {
     >
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor="caption" className="pl-1">
-            Caption
-          </label>
+          <div className="flex items-center justify-between pl-1">
+            <label htmlFor="caption">Caption</label>
+            {/* AI Caption Button — visible only when an image is selected */}
+            {image && (
+              <button
+                type="button"
+                onClick={handleGenerateCaption}
+                disabled={isGenerating}
+                className="flex items-center gap-1.5 rounded-lg border border-violet-500/50 bg-violet-500/10 px-3 py-1 text-violet-400 text-xs transition hover:bg-violet-500/20 disabled:cursor-progress disabled:opacity-60"
+                title="Generate caption with AI"
+              >
+                {isGenerating ? (
+                  <Spinner color="violet-400" size="3" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                {isGenerating ? "Generating…" : "AI Caption"}
+              </button>
+            )}
+          </div>
           <textarea
             name="caption"
-            placeholder="🗽"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder={image ? "Click ✨ AI Caption to generate, or type your own" : "🗽"}
             className="min-h-[160px] resize-none rounded-xl bg-input/30 p-4 focus-visible:ring-2 md:min-h-[200px]"
           />
         </div>
@@ -91,7 +121,7 @@ const CreatePostForm = () => {
               />
               <button
                 type="button"
-                onClick={clearPreview}
+                onClick={() => { clearPreview(); setCaption("") }}
                 className="absolute top-1 right-3 cursor-pointer rounded-full bg-input px-2 text-foreground text-xl shadow-md backdrop-blur-md transition hover:text-third"
               >
                 &times;
@@ -119,7 +149,6 @@ const CreatePostForm = () => {
         {showCropper && (
           <ImageCropper
             image={tempImage}
-            // aspect={3 / 4}
             onCancel={() => setShowCropper(false)}
             onCropComplete={handleCropped}
           />
@@ -183,3 +212,4 @@ const CreatePostForm = () => {
 }
 
 export default CreatePostForm
+

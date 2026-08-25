@@ -38,11 +38,6 @@ services:
     image: postgres:16-alpine
     container_name: sphere-postgres
     environment:
-      # NOTE: standard postgres image only auto-creates ONE database via
-      # POSTGRES_DB. When post-service is added, either give it a second
-      # postgres container (simplest, matches "each service owns its DB")
-      # or add an init script here that runs `CREATE DATABASE sphere_posts`.
-      # Not solved yet — flagged for when post-service starts, not decided silently.
       POSTGRES_DB: sphere_users
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -50,11 +45,32 @@ services:
       - "5432:5432"
     volumes:
       - sphere-pg-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  ai-service:
+    build: ./ai-service
+    container_name: sphere-ai-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/sphere_ai
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET must be set}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY must be set}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
 
   user-service:
     build: ./user-service
