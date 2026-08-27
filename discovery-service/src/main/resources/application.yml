@@ -1,32 +1,49 @@
+# ============================================================================
+# SERVER CONFIGURATION
+# ============================================================================
 server:
   port: ${DISCOVERY_PORT}
 
+# ============================================================================
+# SPRING CORE CONFIGURATION
+# ============================================================================
 spring:
   main:
     banner-mode: off
-  web:
-    error:
-      include-message: always
-      include-stacktrace: never
+
   application:
     name: discovery-service
+
   config:
     import:
       - optional:file:.env[.properties]
       - optional:file:discovery-service/.env[.properties]
 
+  web:
+    error:
+      include-message: always
+      include-stacktrace: never
+
+# ============================================================================
+# SERVICE DISCOVERY (EUREKA SERVER)
+# ============================================================================
 eureka:
   instance:
     hostname: ${EUREKA_HOSTNAME}
   client:
+    # Standalone Eureka server doesn't need to register with itself
     register-with-eureka: false
     fetch-registry: false
     service-url:
       defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
   server:
+    # Prevents Eureka from deregistering services if network issues occur
     enable-self-preservation: ${EUREKA_SELF_PRESERVATION}
     eviction-interval-timer-in-ms: 5000
 
+# ============================================================================
+# ACTUATOR ENDPOINTS
+# ============================================================================
 management:
   endpoints:
     web:
@@ -36,19 +53,18 @@ management:
     health:
       show-details: when-authorized
 
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
 logging:
   pattern:
     console: "%clr(%d{HH:mm}){magenta} %highlight(%-5level) %clr(%logger{30}){green} - %msg%n"
   level:
     root: INFO
-
     org.springframework: WARN
-    org.hibernate: WARN
+    org.springframework.web: WARN
     org.apache.catalina: WARN
     org.apache.coyote: WARN
-    org.springframework.web: WARN
-
     com.netflix.eureka: WARN
     com.netflix.discovery: WARN
-
     com.sphere: DEBUG

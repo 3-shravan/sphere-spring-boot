@@ -3,53 +3,38 @@
 # ============================================================================
 server:
   port: ${NOTIFICATION_SERVICE_PORT}
-  servlet:
-    context-path: /
 
 # ============================================================================
-# SPRING BOOT APPLICATION CONFIGURATION
+# SPRING CORE CONFIGURATION
 # ============================================================================
 spring:
-  # Disable Spring Boot banner for cleaner logs
   main:
     banner-mode: off
 
-  # Enable ANSI colored output for console logs
-  output:
-    ansi:
-      enabled: always
-
-  # Application identification
   application:
     name: notification-service
 
-  # Environment-specific profiles
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
-
-  # Environment file imports
   config:
     import:
       - optional:file:.env[.properties]
       - optional:file:notification-service/.env[.properties]
 
-  # API error response configuration
   web:
     error:
-      include-message: always # Always include error message in response
-      include-stacktrace: never # NEVER expose stack traces (security best practice)
+      include-message: always
+      include-stacktrace: never
 
 # ============================================================================
-# SPHERE-SPECIFIC CONFIGURATION
+# SPHERE APPLICATION SPECIFICS
 # ============================================================================
 sphere:
   jwt:
-    secret: ${JWT_SECRET} # MUST match user-service/post-service's JWT_SECRET — same shared stateless-JWT signing key
+    secret: ${JWT_SECRET}
   internal:
-    api-key: ${INTERNAL_API_SECRET} # MUST match user-service/post-service's INTERNAL_API_SECRET
+    api-key: ${INTERNAL_API_SECRET}
 
 # ============================================================================
-# SERVICE DISCOVERY (EUREKA)
+# SERVICE DISCOVERY (EUREKA CLIENT)
 # ============================================================================
 eureka:
   client:
@@ -57,78 +42,52 @@ eureka:
       defaultZone: ${EUREKA_URI}
     fetch-registry: true
     register-with-eureka: true
-    registry-fetch-interval-seconds: 5
   instance:
     hostname: localhost
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
 
 # ============================================================================
-# MANAGEMENT & ACTUATOR ENDPOINTS
+# ACTUATOR ENDPOINTS
 # ============================================================================
 management:
   endpoints:
     web:
       exposure:
-        include: health,info # Expose only essential endpoints
+        include: health,info
   endpoint:
     health:
-      show-details: when-authorized # Show details only for authorized users
-      probes:
-        enabled: true # Enable liveness and readiness probes (Kubernetes)
+      show-details: when-authorized
 
 # ============================================================================
-# SPRINGDOC/OPENAPI CONFIGURATION
+# OPENAPI / SWAGGER DOCUMENTATION
 # ============================================================================
 springdoc:
   api-docs:
-    enabled: true # Enable API documentation endpoint
+    enabled: true
     path: /v3/api-docs
   swagger-ui:
-    enabled: true # Enable Swagger UI
-    path: /swagger-ui.html # Configurable Swagger UI path
-    operations-sorter: method # Sort operations by HTTP method
-    tags-sorter: alpha # Sort tags alphabetically
-    use-root-path: false # Use full path, not root
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
 
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
 logging:
-  # Logging pattern: concise, colorful, developer-friendly
-  # Format: [TIME] [LEVEL] [LOGGER] - MESSAGE
   pattern:
     console: "%clr(%d{HH:mm}){magenta} %highlight(%-5level) %clr(%logger{30}){green} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{30} - %msg%n"
-
-  # Logging levels configuration
   level:
-    # Root logger level
     root: INFO
-
-    # Spring Framework logging (WARN to reduce noise)
     org.springframework: WARN
     org.springframework.web: WARN
     org.springframework.cloud: WARN
     org.springframework.boot: WARN
-
-    # Hibernate/JPA logging (WARN to reduce noise)
-    org.hibernate: WARN
-    org.hibernate.SQL: WARN
-
-    # Tomcat container logging (WARN to reduce noise)
     org.apache.catalina: WARN
     org.apache.coyote: WARN
-
-    # Database connection pool logging
-    com.zaxxer.hikari: WARN
-
-    # Netflix/Eureka service discovery logging
     com.netflix.eureka: WARN
     com.netflix.discovery: WARN
-
-    # SpringDoc/OpenAPI logging (ERROR to suppress startup warnings)
     org.springdoc: ERROR
-
-    # Application-specific logging (DEBUG for development)
     com.sphere: DEBUG

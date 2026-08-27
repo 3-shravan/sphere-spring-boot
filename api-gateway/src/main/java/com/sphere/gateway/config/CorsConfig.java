@@ -9,14 +9,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-
 @Configuration
 public class CorsConfig {
 
-    @Value("${sphere.cors.client-url}")
+    @Value("${CLIENT_URL:http://localhost:5173}")
     private String clientUrl;
 
-    @Value("${sphere.cors.production-client-url:}")
+    @Value("${PRODUCTION_CLIENT_URL:https://thesphere.app}")
     private String productionClientUrl;
 
     @Bean
@@ -38,11 +37,7 @@ public class CorsConfig {
     private List<String> allowedOrigins() {
         return List.of(
                 clientUrl,
-                productionClientUrl == null || productionClientUrl.isBlank()
-                        ? "http://localhost:5173" // placeholder filtered below if duplicate
-                        : productionClientUrl,
-                "http://localhost:5173",
-                "http://localhost:3000"
+                productionClientUrl
         ).stream().filter(origin -> origin != null && !origin.isBlank()).distinct().toList();
     }
 }
