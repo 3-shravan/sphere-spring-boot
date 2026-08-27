@@ -7,14 +7,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 /**
  * Feign client to ai-service.
  *
- * Used to fetch an AI-generated caption for a post's image URL.
+ * Used to fetch an AI-generated caption or tags for a post's image URL.
  * The call happens after the post has been created and its Cloudinary URL
  * is available (the URL is the cache key in ai-service).
  *
  * Resolved via Eureka — no hardcoded host:port.
  * Uses an internal API key (FeignClientConfig) for service-to-service auth.
  */
-@FeignClient(name = "AI-SERVICE", path = "/api/v1/ai/caption", configuration = FeignClientConfig.class, fallbackFactory = AiServiceClientFallbackFactory.class)
+@FeignClient(name = "AI-SERVICE", contextId = "aiServiceClient", path = "/api/v1/ai", configuration = FeignClientConfig.class, fallbackFactory = AiServiceClientFallbackFactory.class)
 public interface AiServiceClient {
 
   /**
@@ -24,6 +24,12 @@ public interface AiServiceClient {
    * @param imageUrl Publicly accessible Cloudinary URL of the post image.
    * @return Caption result, or null if ai-service is unavailable.
    */
-  @GetMapping
+  @GetMapping("/caption")
   CaptionResult getCaptionForImage(@RequestParam("imageUrl") String imageUrl);
+
+  /**
+   * Retrieves (or triggers generation of) tags for the given image URL.
+   */
+  @GetMapping("/tags")
+  TagResult getTagsForImage(@RequestParam("imageUrl") String imageUrl);
 }

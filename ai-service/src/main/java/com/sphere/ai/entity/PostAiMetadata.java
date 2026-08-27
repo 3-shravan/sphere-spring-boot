@@ -18,11 +18,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Stores AI-generated captions, keyed by image URL.
+ * Stores AI-generated metadata (captions, tags), keyed by image URL.
  * One row per unique imageUrl — prevents repeated OpenAI calls for the same
  * image.
  *
- * Extended later for description, hashtags, tags, moderation etc. by adding
+ * Extended later for description, hashtags, moderation etc. by adding
  * columns and a new Flyway migration — no changes to existing code required.
  */
 @Entity
@@ -45,6 +45,10 @@ public class PostAiMetadata {
   /** AI-generated short caption (≤150 chars). */
   @Column(name = "caption", length = 500)
   private String caption;
+
+  /** AI-generated tags serialized as JSON array string. */
+  @Column(name = "tags_json", columnDefinition = "TEXT")
+  private String tagsJson;
 
   @Column(name = "ai_provider", nullable = false, length = 50)
   @Builder.Default

@@ -37,6 +37,24 @@ public class PromptService {
         """;
   }
 
+  /**
+   * Returns the prompt used to generate concise social-media tags from an
+   * image.
+   */
+  public String imageTagsPrompt() {
+    return """
+        You are a social media tagging assistant for the Sphere platform.
+        Analyze the provided image and generate relevant tags.
+        Requirements:
+        - Return 5 to 10 tags.
+        - Tags must be lowercase.
+        - Do not include the # symbol.
+        - Prefer short tags (1-2 words max).
+        - Avoid duplicates and generic filler tags.
+        - Output STRICT JSON array only, e.g. [\"sunset\",\"travel\",\"beach\"].
+        """;
+  }
+
   // -----------------------------------------------------------------------
   // Future feature placeholders — implement the method body when ready.
   // -----------------------------------------------------------------------

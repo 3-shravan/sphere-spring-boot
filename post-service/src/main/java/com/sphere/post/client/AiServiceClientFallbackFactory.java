@@ -18,6 +18,16 @@ public class AiServiceClientFallbackFactory implements FallbackFactory<AiService
   @Override
   public AiServiceClient create(Throwable cause) {
     log.warn("AiServiceClient fallback triggered. ai-service may be unavailable. cause={}", cause.getMessage());
-    return imageUrl -> null;
+    return new AiServiceClient() {
+      @Override
+      public CaptionResult getCaptionForImage(String imageUrl) {
+        return null;
+      }
+
+      @Override
+      public TagResult getTagsForImage(String imageUrl) {
+        return null;
+      }
+    };
   }
 }

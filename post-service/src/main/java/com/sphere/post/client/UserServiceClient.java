@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * — post-service is acting on its own behalf to fetch display data, not
  * impersonating the caller.
  */
-@FeignClient(name = "USER-SERVICE", path = "/internal/users", configuration = FeignClientConfig.class, fallbackFactory = UserServiceClientFallbackFactory.class)
+@FeignClient(name = "USER-SERVICE", contextId = "userServiceClient", path = "/internal/users", configuration = FeignClientConfig.class, fallbackFactory = UserServiceClientFallbackFactory.class)
 public interface UserServiceClient {
 
     @GetMapping("/{id}")

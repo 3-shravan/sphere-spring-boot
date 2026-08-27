@@ -135,6 +135,7 @@ public class PostService {
         // Warm the AI caption cache in the background (best-effort).
         // If ai-service is down the fallback returns null and we continue.
         warmAiCaptionCache(uploaded.url());
+        warmAiTagsCache(uploaded.url());
         return toPostResponse(post, currentUserId);
     }
 
@@ -362,6 +363,20 @@ public class PostService {
             // ai-service unavailable or caption generation failed — safe to ignore
             org.slf4j.LoggerFactory.getLogger(PostService.class)
                     .warn("AI caption cache warm-up skipped for imageUrl={} reason={}", imageUrl, e.getMessage());
+        }
+    }
+
+    /**
+     * Best-effort: warm ai-service tags cache after a post image is uploaded.
+     * Failure is silently swallowed — tag generation never blocks post creation.
+     */
+    private void warmAiTagsCache(String imageUrl) {
+        try {
+            aiServiceClient.getTagsForImage(imageUrl);
+        } catch (Exception e) {
+            // ai-service unavailable or tag generation failed — safe to ignore
+            org.slf4j.LoggerFactory.getLogger(PostService.class)
+                    .warn("AI tags cache warm-up skipped for imageUrl={} reason={}", imageUrl, e.getMessage());
         }
     }
 }

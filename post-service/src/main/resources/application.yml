@@ -13,6 +13,7 @@ spring:
   # Disable Spring Boot banner for cleaner logs
   main:
     banner-mode: off
+    allow-bean-definition-overriding: true
 
   # Enable ANSI colored output for console logs
   output:

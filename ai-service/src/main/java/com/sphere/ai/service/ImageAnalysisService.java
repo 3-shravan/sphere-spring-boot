@@ -1,6 +1,7 @@
 package com.sphere.ai.service;
 
 import com.sphere.ai.dto.response.ImageAnalysisResponse;
+import com.sphere.ai.dto.response.ImageTagsResponse;
 
 /**
  * AI caption generation service.
@@ -30,4 +31,22 @@ public interface ImageAnalysisService {
    * @return Caption response (cached=false always).
    */
   ImageAnalysisResponse generateCaptionFromBytes(byte[] bytes, String contentType);
+
+  /**
+   * Generates (or returns cached) tags for the image at the given URL.
+   *
+   * @param imageUrl Publicly accessible image URL.
+   * @return Tags response (cached=true if served from DB).
+   */
+  ImageTagsResponse generateTags(String imageUrl);
+
+  /**
+   * Generates tags from raw image bytes (direct file upload path).
+   * Result is NOT cached — no persistent imageUrl key available.
+   *
+   * @param bytes       Raw image bytes from the uploaded file.
+   * @param contentType MIME type string, e.g. "image/jpeg".
+   * @return Tags response (cached=false always).
+   */
+  ImageTagsResponse generateTagsFromBytes(byte[] bytes, String contentType);
 }
