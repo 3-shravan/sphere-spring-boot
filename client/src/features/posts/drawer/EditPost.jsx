@@ -15,9 +15,10 @@ import { usePostFromCache } from "@/shared"
 import { errorToast, formatTags, stringifyTags, validatePostForm } from "@/utils"
 import { useUpdatePost } from "../api"
 
-const EditPost = ({ open, setOpen, postId }) => {
-  const post = usePostFromCache(postId)
-  const { mutateAsync: updatePost, isPending } = useUpdatePost(post?._id)
+const EditPost = ({ open, setOpen, postId, post: postProp }) => {
+  const cachedPost = usePostFromCache(postId)
+  const post = postProp || cachedPost
+  const { mutateAsync: updatePost, isPending } = useUpdatePost(postId)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -26,10 +27,7 @@ const EditPost = ({ open, setOpen, postId }) => {
     const tags = formData.get("tags")
     const formattedTags = formatTags(tags)
     formData.delete("tags")
-    // formData.set("tags", JSON.stringify(formattedTags));
-    formattedTags.forEach((tag) => {
-      formData.append("tags", tag)
-    })
+    formData.set("tags", JSON.stringify(formattedTags));
 
     const errors = validatePostForm(formData, false)
     if (errors) return errorToast(errors)

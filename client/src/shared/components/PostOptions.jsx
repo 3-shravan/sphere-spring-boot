@@ -11,16 +11,23 @@ import { useAuth } from "@/context"
 import EditPost from "@/features/posts/drawer/EditPost"
 import { DeleteModal, ShareModal, usePostFromCache } from "@/shared"
 
-const PostOptions = ({ postId, dropdown }) => {
-  const post = usePostFromCache(postId, "feed", dropdown)
+const PostOptions = ({ postId, dropdown, author, thoughts, post: postProp }) => {
+  const cachedPost = usePostFromCache(postId, "feed", dropdown)
+  const post = postProp || cachedPost
 
   const [showModal, setShowModal] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const { currentUserId } = useAuth()
-  const authorized = currentUserId === post?.author?._id
-  const isThoughts = !!post?.thoughts
+
+  // Use post from cache if available, otherwise fallback to props
+  const resolvedAuthor = post?.author || author;
+  const resolvedThoughts = post ? post.thoughts : thoughts;
+
+  const authorId = resolvedAuthor?._id || resolvedAuthor?.id;
+  const authorized = String(currentUserId) === String(authorId);
+  const isThoughts = !!resolvedThoughts
 
   return (
     <>
@@ -46,7 +53,7 @@ const PostOptions = ({ postId, dropdown }) => {
       </DropdownMenu>
 
       {/* Edit Modal */}
-      {editOpen && <EditPost open={open} setOpen={setEditOpen} postId={postId} />}
+      {editOpen && <EditPost open={editOpen} setOpen={setEditOpen} postId={postId} post={post} />}
       {/* Share Modal */}
       {showModal && (
         <Modal darkModal={true} onCancel={() => setShowModal(false)} title="Share Post">

@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom"
 import { Container, Loading } from "@/components"
 import { useAuth } from "@/context"
 import { PostGrid } from "@/shared"
-import { useGetProfile } from "../../api/useQueries"
+import { useGetProfile, useProfilePosts } from "../../api/useQueries"
 import { ProfileCard } from "../components/ProfileCard"
 
 export default function Profile() {
@@ -12,7 +12,9 @@ export default function Profile() {
 
   const user = profile?.user
   const me = user?._id === currentUserId
-  const posts = profile?.user?.posts
+  const { data: postsData } = useProfilePosts(user?.id)
+
+  const posts = postsData?.pages?.flatMap((page) => page?.posts) || []
 
   if (isLoading) return <Loading />
   if (!user) return null

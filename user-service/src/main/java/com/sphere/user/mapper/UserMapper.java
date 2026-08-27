@@ -14,6 +14,7 @@ public interface UserMapper {
     @Mapping(target = "profilePicture", source = "profilePictureUrl")
     @Mapping(target = "followersCount", ignore = true)
     @Mapping(target = "followingCount", ignore = true)
+    @Mapping(target = "isFollowing", ignore = true)
     UserResponse toUserResponse(User user);
 
     @Mapping(target = "name", source = "username")

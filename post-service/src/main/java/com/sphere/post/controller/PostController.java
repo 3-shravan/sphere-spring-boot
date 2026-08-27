@@ -74,6 +74,18 @@ public class PostController {
                 "hasMore", feed.hasMore(), "posts", feed.posts()))));
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserPosts(
+            @AuthenticationPrincipal Long currentUserId,
+            @PathVariable("userId") Long userId,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "limit", defaultValue = "10") int limit) {
+        var feed = postService.getUserPosts(currentUserId, userId, page, limit);
+        return ResponseEntity.ok(ResponseUtil.success("User posts fetched successfully", Map.of(
+                "currentPage", feed.currentPage(), "totalPages", feed.totalPages(),
+                "hasMore", feed.hasMore(), "posts", feed.posts())));
+    }
+
     @GetMapping("/{postId}")
     @io.swagger.v3.oas.annotations.Operation(security = {}, description = "Public — no auth required. If a token IS supplied, the response includes isSaved for that viewer.")
     public ResponseEntity<Map<String, Object>> getSinglePost(@PathVariable Long postId) {

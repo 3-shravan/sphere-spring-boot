@@ -128,14 +128,14 @@ public class UserService {
     public UserResponse myProfile(Long currentUserId) {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new NotFoundException("error while getting your profile"));
-        return toFullUserResponse(user);
+        return toFullUserResponse(user, currentUserId);
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getProfileByUsername(String username) {
+    public UserResponse getProfileByUsername(String username, Long currentUserId) {
         User user = userRepository.findByUsernameAndAccountVerifiedTrue(username)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        return toFullUserResponse(user);
+        return toFullUserResponse(user, currentUserId);
     }
 
     public record UpdateProfileResult(UserResponse user, boolean changed) {
@@ -160,7 +160,7 @@ public class UserService {
                 && !hasNewPicture;
 
         if (unchanged) {
-            return new UpdateProfileResult(toFullUserResponse(user), false);
+            return new UpdateProfileResult(toFullUserResponse(user, currentUserId), false);
         }
 
         if (hasNewPicture) {
@@ -184,7 +184,7 @@ public class UserService {
             user.setDob(dob);
 
         userRepository.save(user);
-        return new UpdateProfileResult(toFullUserResponse(user), true);
+        return new UpdateProfileResult(toFullUserResponse(user, currentUserId), true);
     }
 
     @Transactional
@@ -245,13 +245,34 @@ public class UserService {
     // Helpers
     // ---------------------------------------------------------------
 
-    private UserResponse toFullUserResponse(User user) {
+    private UserResponse toFullUserResponse(User user, Long currentUserId) {
         UserResponse base = userMapper.toUserResponse(user);
         long followers = userFollowRepository.countByFolloweeId(user.getId());
         long following = userFollowRepository.countByFollowerId(user.getId());
+        
+        boolean isFollowing = false;
+        if (currentUserId != null) {
+            isFollowing = userFollowRepository.existsByFollowerIdAndFolloweeId(currentUserId, user.getId());
+        }
+        
         return new UserResponse(base.id(), base.name(), base.fullName(), base.email(), base.dob(),
                 base.profilePicture(), base.bio(), base.gender(), base.accountVerified(), followers, following,
+                isFollowing,
                 base.createdAt(), base.updatedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<com.sphere.user.dto.response.UserSummaryResponse> getFollowers(Long userId, int page, int size) {
+        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(page, size);
+        return userFollowRepository.findByFolloweeId(userId, pageRequest)
+                .map(f -> userRepository.findById(f.getFollowerId()).map(userMapper::toSummary).orElse(null));
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<com.sphere.user.dto.response.UserSummaryResponse> getFollowing(Long userId, int page, int size) {
+        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(page, size);
+        return userFollowRepository.findByFollowerId(userId, pageRequest)
+                .map(f -> userRepository.findById(f.getFolloweeId()).map(userMapper::toSummary).orElse(null));
     }
 
     // For list-style endpoints (search/suggested/birthdays) the source

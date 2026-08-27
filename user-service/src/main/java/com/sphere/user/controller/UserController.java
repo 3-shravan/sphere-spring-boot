@@ -67,9 +67,27 @@ public class UserController {
     }
 
     @GetMapping("/profile/{username}")
-    public ResponseEntity<Map<String, Object>> getProfileByUsername(@PathVariable String username) {
-        UserResponse user = userService.getProfileByUsername(username);
+    public ResponseEntity<Map<String, Object>> getProfileByUsername(@PathVariable String username, @AuthenticationPrincipal User currentUser) {
+        UserResponse user = userService.getProfileByUsername(username, currentUser != null ? currentUser.getId() : null);
         return ResponseEntity.ok(ResponseUtil.success("Profile fetched", Map.of("user", user)));
+    }
+
+    @GetMapping("/{userId}/followers")
+    public ResponseEntity<Map<String, Object>> getFollowers(
+            @PathVariable Long userId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        org.springframework.data.domain.Page<com.sphere.user.dto.response.UserSummaryResponse> followers = userService.getFollowers(userId, page, size);
+        return ResponseEntity.ok(ResponseUtil.success("Followers fetched", Map.of("followers", followers)));
+    }
+
+    @GetMapping("/{userId}/following")
+    public ResponseEntity<Map<String, Object>> getFollowing(
+            @PathVariable Long userId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        org.springframework.data.domain.Page<com.sphere.user.dto.response.UserSummaryResponse> following = userService.getFollowing(userId, page, size);
+        return ResponseEntity.ok(ResponseUtil.success("Following fetched", Map.of("following", following)));
     }
 
     @PostMapping(value = "/update", consumes = "multipart/form-data")

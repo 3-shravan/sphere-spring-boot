@@ -12,17 +12,18 @@ import com.sphere.user.entity.Gender;
  * `select:false` in the source — there is simply no field for it here).
  */
 public record UserResponse(
-                Long id,
-                String name,
-                String fullName,
-                String email,
-                LocalDate dob,
-                String profilePicture,
-                String bio,
-                Gender gender,
-                boolean accountVerified,
-                long followersCount,
-                long followingCount,
-                Instant createdAt,
-                Instant updatedAt) {
+    Long id,
+    String name,
+    String fullName,
+    String email,
+    LocalDate dob,
+    String profilePicture,
+    String bio,
+    Gender gender,
+    boolean accountVerified,
+    long followersCount,
+    long followingCount,
+    boolean isFollowing,
+    Instant createdAt,
+    Instant updatedAt) {
 }

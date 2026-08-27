@@ -59,9 +59,7 @@ const CreatePostForm = () => {
     const tags = formData.get("tags")
     const formattedTags = formatTags(tags)
     formData.delete("tags")
-    formattedTags.forEach((tag) => {
-      formData.append("tags", tag)
-    })
+    formData.set("tags", JSON.stringify(formattedTags));
 
     const error = validatePostForm(formData)
     if (error) return errorToast(error)

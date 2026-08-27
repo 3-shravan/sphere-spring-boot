@@ -54,9 +54,9 @@ const CommentBox = ({
                 </div>
               )}
 
-              {canDelete(comment?.author?._id) && (
+              {canDelete(comment?.author?.id || comment?.author?._id) && (
                 <button
-                  onClick={() => !deleting && handleDelete(comment._id)}
+                  onClick={() => !deleting && handleDelete(comment.id || comment._id)}
                   className="flex cursor-pointer items-center gap-0.5 rounded-full bg-muted-foreground/10 px-2 py-1 text-rose-400 transition hover:bg-black/10"
                 >
                   {deleting ? <Trash2 size={12} className="animate-spin" /> : <Trash size={12} />}

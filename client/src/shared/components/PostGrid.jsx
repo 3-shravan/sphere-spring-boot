@@ -19,7 +19,7 @@ const PostGrid = ({
   const navigate = useNavigate()
   if (!posts) return null
 
-  const isExpanded = (caption, Words) => caption.length > Words
+  const isExpanded = (caption, Words) => caption?.length > Words
   const toViewPost = (postId) => navigate(`/post/${postId}`)
   const toProfile = (username) => navigate(`/profile/${username}`)
 
@@ -32,13 +32,13 @@ const PostGrid = ({
       ) : (
         posts?.map((post) => (
           <div
-            key={post._id}
+            key={post.id || post._id}
             className="relative mb-4 cursor-pointer break-inside-avoid overflow-hidden rounded-4xl border shadow"
           >
             <div className="relative w-full">
               {post?.media ? (
                 <img
-                  onClick={() => toViewPost(post._id)}
+                  onClick={() => toViewPost(post.id || post._id)}
                   src={post.media}
                   alt="post"
                   className="h-auto w-full object-cover"
@@ -46,14 +46,14 @@ const PostGrid = ({
               ) : (
                 <div
                   className="inset-0 z-10 h-64 bg-background/70"
-                  onClick={() => toViewPost(post._id)}
+                  onClick={() => toViewPost(post.id || post._id)}
                 >
-                  <ThoughtsCard thought={post?.thoughts} postId={post._id} className="h-full" />
+                  <ThoughtsCard thought={post?.thoughts} postId={post.id || post._id} className="h-full" />
                 </div>
               )}
 
               <div className="absolute top-3 right-1">
-                <PostOptions postId={post._id} author={post.author} thoughts={post.thoughts} />
+                <PostOptions postId={post._id || post.id} author={post.author} thoughts={post.thoughts} post={post} />
               </div>
 
               {showAuthor && (
@@ -91,7 +91,7 @@ const PostGrid = ({
                 <Footer
                   createdAt={post.createdAt}
                   location={post.location}
-                  id={post._id}
+                  id={post.id || post._id}
                   savePost={savePost}
                   likePost={likePost}
                   likes={post.likes}

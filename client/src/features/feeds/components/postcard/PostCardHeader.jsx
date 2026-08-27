@@ -24,7 +24,7 @@ const PostCardHeader = ({ post }) => {
         </div>
       </div>
 
-      <PostOptions postId={post._id} dropdown={dropdown} />
+      <PostOptions postId={post._id || post.id} dropdown={dropdown} author={post.author || author} thoughts={post.thoughts} post={post} />
     </div>
   )
 }

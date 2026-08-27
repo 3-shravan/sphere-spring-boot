@@ -12,7 +12,7 @@ export const UserCardMobile = ({ user, followUser, isFollowing, setMap }) => {
         </Link>
 
         <FollowButton
-          userId={user._id}
+          userId={user.id || user._id}
           followUser={followUser}
           isFollowing={isFollowing}
           setMap={setMap}
@@ -25,7 +25,7 @@ export const UserCardMobile = ({ user, followUser, isFollowing, setMap }) => {
 export const UserCard = ({ user, followUser, isFollowing, setMap }) => {
   return (
     <div
-      key={user._id}
+      key={user.id || user._id}
       className="flex-between cursor-pointer rounded-xl px-3 py-1 transition hover:bg-muted"
     >
       <Link to={`/profile/${user.name}`} className="flex w-full items-center gap-2">
@@ -35,7 +35,7 @@ export const UserCard = ({ user, followUser, isFollowing, setMap }) => {
         </span>
       </Link>
       <FollowButton
-        userId={user._id}
+        userId={user.id || user._id}
         followUser={followUser}
         isFollowing={isFollowing}
         setMap={setMap}

@@ -43,7 +43,7 @@ export function ProfileCard({ user }) {
           </div>
           <div
             className="flex cursor-pointer flex-col items-center"
-            onClick={() => setActiveModal("followings")}
+            onClick={() => setActiveModal("following")}
           >
             <span className="font-extrabold text-lg">{initialFollowingCount ?? (following?.length || 0)}</span>
             <span className="text-neutral-500 text-xs">Following</span>
@@ -91,13 +91,13 @@ export function ProfileCard({ user }) {
               followUser={followUser}
               isPending={isPending}
             />
-            <Button
+            {/* <Button
               variant="secondary"
               onClick={startChat}
               className="cursor-pointer rounded-xl border bg-input/20 font-Gilroy font-bold text-xs"
             >
               Message
-            </Button>
+            </Button> */}
           </div>
         )}
       </div>
@@ -106,7 +106,8 @@ export function ProfileCard({ user }) {
         <Modal darkModal={false}>
           <ShowUserModal
             title={activeModal === "followers" ? "Followers" : "Following"}
-            users={activeModal === "followers" ? (followers || []) : (following || [])}
+            type={activeModal}
+            userId={userId}
             onCancel={() => setActiveModal(null)}
           />{" "}
         </Modal>

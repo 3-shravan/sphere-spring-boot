@@ -34,8 +34,8 @@ const Comment = ({ comment, postId, parentId }) => {
       {showReplies &&
         comment?.replies?.length > 0 &&
         comment.replies.map((c) => (
-          <div key={c._id} className="my-1 ml-10">
-            <Comment comment={c} parentId={c._id} postId={postId} />
+          <div key={c.id || c._id} className="my-1 ml-10">
+            <Comment comment={c} parentId={c.id || c._id} postId={postId} />
           </div>
         ))}
       {comment.replies.length > 0 && showReplies && (

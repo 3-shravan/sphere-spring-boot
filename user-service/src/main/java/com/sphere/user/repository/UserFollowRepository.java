@@ -27,8 +27,10 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, UserFoll
     void deleteBothDirections(@Param("userA") Long userA, @Param("userB") Long userB);
 
     List<UserFollow> findByFollowerId(Long followerId);
+    org.springframework.data.domain.Page<UserFollow> findByFollowerId(Long followerId, org.springframework.data.domain.Pageable pageable);
 
     List<UserFollow> findByFolloweeId(Long followeeId);
+    org.springframework.data.domain.Page<UserFollow> findByFolloweeId(Long followeeId, org.springframework.data.domain.Pageable pageable);
 
     long countByFollowerId(Long followerId);
 

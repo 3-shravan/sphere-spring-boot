@@ -83,6 +83,12 @@ public class PostService {
         return toFeedPage(result, currentUserId);
     }
 
+    public FeedPageResponse getUserPosts(Long currentUserId, Long targetUserId, int page, int limit) {
+        Page<Post> result = postRepository.findByAuthorIdOrderByCreatedAtDesc(targetUserId,
+                PageRequest.of(page - 1, limit));
+        return toFeedPage(result, currentUserId);
+    }
+
     @Transactional(readOnly = true)
     public List<PostResponse> getSavedPosts(Long currentUserId) {
         List<Long> postIds = savedPostRepository.findPostIdsByUserId(currentUserId);

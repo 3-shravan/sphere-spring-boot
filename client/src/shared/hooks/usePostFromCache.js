@@ -17,5 +17,5 @@ export default function usePostFromCache(postId, source = "feed", dropdown = "fo
 
   const allPosts = cache.pages ? cache.pages.flatMap((page) => page.posts) : cache.posts || cache
 
-  return allPosts.find((p) => p._id === postId)
+  return allPosts.find((p) => String(p._id || p.id) === String(postId))
 }
