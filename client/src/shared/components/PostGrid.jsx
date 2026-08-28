@@ -94,7 +94,9 @@ const PostGrid = ({
                   id={post.id || post._id}
                   savePost={savePost}
                   likePost={likePost}
-                  likes={post.likes}
+                  likesCount={post.likesCount}
+                  isLiked={post.likedByCurrentUser || post.isLiked}
+                  isSaved={post.isSaved}
                 />
               </div>
             </div>
@@ -107,7 +109,7 @@ const PostGrid = ({
 
 export default PostGrid
 
-const Footer = ({ createdAt, location, savePost, likePost, id, likes }) => (
+const Footer = ({ createdAt, location, savePost, likePost, id, likesCount = 0, isLiked = false, isSaved = false }) => (
   <div className="flex justify-between">
     <div className="flex items-center pt-1 font-Gilroy">
       <p className="text-[10px] text-neutral-400">
@@ -120,8 +122,8 @@ const Footer = ({ createdAt, location, savePost, likePost, id, likes }) => (
       )}
     </div>
     <div className="flex gap-2">
-      {savePost && <SavePost postId={id} />}
-      {likePost && <LikePost postId={id} likes={likes} likedBy={false} />}
+      {savePost && <SavePost postId={id} isSaved={isSaved} />}
+      {likePost && <LikePost postId={id} likesCount={likesCount} isLiked={isLiked} likedBy={false} />}
     </div>
   </div>
 )

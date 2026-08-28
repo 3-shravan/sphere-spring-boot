@@ -3,8 +3,8 @@ import { useAuth } from "@/context"
 import { showErrorToast } from "@/lib/api/api-responses"
 import useSavePost from "@/shared/hooks/useSavePost"
 
-const SavePost = ({ postId }) => {
-  const { toggleSave, isSaved, saveIsPending } = useSavePost(postId)
+const SavePost = ({ postId, isSaved: initialIsSaved = false }) => {
+  const { toggleSave, isSaved, saveIsPending } = useSavePost(postId, initialIsSaved)
   const { auth } = useAuth()
   return (
     <button

@@ -1,16 +1,12 @@
 import { useState, useEffect } from "react"
 import { useToggleSavePost } from "../api/useMutations"
-import { useSavedPosts } from "../api/useQueries"
 
-const useSavePost = (postId) => {
-  const { data } = useSavedPosts()
-  const [isSaved, setIsSaved] = useState(false)
+const useSavePost = (postId, initialIsSaved = false) => {
+  const [isSaved, setIsSaved] = useState(initialIsSaved)
 
   useEffect(() => {
-    if (data?.savedPosts) {
-      setIsSaved(data.savedPosts.some((p) => String(p._id || p.id) === String(postId)))
-    }
-  }, [data?.savedPosts, postId])
+    setIsSaved(initialIsSaved)
+  }, [initialIsSaved])
 
   const { mutate: toggleSave, isPending: saveIsPending } = useToggleSavePost({
     onMutate: () => setIsSaved((prev) => !prev),
@@ -19,4 +15,5 @@ const useSavePost = (postId) => {
 
   return { toggleSave, isSaved, saveIsPending }
 }
+
 export default useSavePost

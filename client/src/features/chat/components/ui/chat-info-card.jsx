@@ -29,7 +29,7 @@ export function ChatInfoCard({ isChatted }) {
       )}
 
       <div className="mt-2 text-muted-foreground text-xs">
-        {otherUser.followers.length} followers • {otherUser.following.length} following
+        {otherUser.followersCount ?? otherUser.followers?.length ?? 0} followers • {otherUser.followingCount ?? otherUser.following?.length ?? 0} following
       </div>
 
       <Link

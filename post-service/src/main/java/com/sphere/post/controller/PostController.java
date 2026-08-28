@@ -14,6 +14,7 @@ import com.sphere.post.dto.response.PostResponse;
 import com.sphere.post.service.PostService;
 import com.sphere.post.util.ResponseUtil;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,8 +22,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Ports server/src/routes/post.routes.js (posts/feed portion — comments are
- * in CommentController). Two routes below are public per SecurityConfig:
- * GET /{postId} and (in CommentController) GET /{postId}/comments.
+ * in CommentController).
  */
 @RestController
 @RequestMapping("/api/v1/posts")
@@ -56,9 +56,17 @@ public class PostController {
     }
 
     @GetMapping("/saved")
-    public ResponseEntity<Map<String, Object>> getSavedPosts(@AuthenticationPrincipal Long currentUserId) {
-        var posts = postService.getSavedPosts(currentUserId);
-        return ResponseEntity.ok(ResponseUtil.success("Saved posts fetched successfully", Map.of("savedPosts", posts)));
+    public ResponseEntity<Map<String, Object>> getSavedPosts(
+            @AuthenticationPrincipal Long currentUserId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+        var feed = postService.getSavedPosts(currentUserId, page, limit);
+        return ResponseEntity.ok(ResponseUtil.success("Saved posts fetched successfully", Map.of(
+                "currentPage", feed.currentPage(),
+                "totalPages", feed.totalPages(),
+                "hasMore", feed.hasMore(),
+                "posts", feed.posts(),
+                "savedPosts", feed.posts())));
     }
 
     @GetMapping("/me")
@@ -67,8 +75,6 @@ public class PostController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit) {
         var feed = postService.getMyPosts(currentUserId, page, limit);
-        // Preserves the source's double-nested-under-"data" quirk for this
-        // one endpoint (Decision #8) — flagged, not silently normalized.
         return ResponseEntity.ok(ResponseUtil.success("Your posts fetched successfully", Map.of("data", Map.of(
                 "currentPage", feed.currentPage(), "totalPages", feed.totalPages(),
                 "hasMore", feed.hasMore(), "posts", feed.posts()))));
@@ -87,10 +93,25 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    @io.swagger.v3.oas.annotations.Operation(security = {}, description = "Public — no auth required. If a token IS supplied, the response includes isSaved for that viewer.")
+    @Operation(security = {}, description = "Public — no auth required. If a token IS supplied, the response includes isSaved for that viewer.")
     public ResponseEntity<Map<String, Object>> getSinglePost(@PathVariable Long postId) {
         PostResponse post = postService.getSinglePost(postId);
         return ResponseEntity.ok(ResponseUtil.success("Post fetched successfully", Map.of("post", post)));
+    }
+
+    @GetMapping("/{postId}/likes")
+    @Operation(description = "Dedicated paginated endpoint to retrieve users who liked this post.")
+    public ResponseEntity<Map<String, Object>> getPostLikes(
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit) {
+        var likesPage = postService.getPostLikes(postId, page, limit);
+        return ResponseEntity.ok(ResponseUtil.success("Post likers fetched successfully", Map.of(
+                "currentPage", likesPage.getNumber() + 1,
+                "totalPages", likesPage.getTotalPages(),
+                "totalElements", likesPage.getTotalElements(),
+                "hasMore", likesPage.hasNext(),
+                "likers", likesPage.getContent())));
     }
 
     @PostMapping(consumes = "multipart/form-data")

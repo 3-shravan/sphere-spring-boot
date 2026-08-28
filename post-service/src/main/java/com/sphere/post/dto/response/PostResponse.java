@@ -3,8 +3,17 @@ package com.sphere.post.dto.response;
 import java.time.Instant;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sphere.post.entity.PostType;
 
+/**
+ * Primary Post DTO containing:
+ * 1. Entity Information (caption, media, tags, author, etc.)
+ * 2. Aggregated Counts (likesCount, commentsCount)
+ * 3. Dynamic User State Flags (likedByCurrentUser, isLiked, isSaved)
+ *
+ * Excludes large collections (likes[], comments[], bookmarks[]) per Social Media Relationship Architecture.
+ */
 public record PostResponse(
         Long id,
         AuthorResponse author,
@@ -18,8 +27,11 @@ public record PostResponse(
         boolean likedByCurrentUser,
         long commentsCount,
         Boolean isSaved,
-        List<com.sphere.post.client.AuthorSummary> recentLikers,
         Instant createdAt,
         Instant updatedAt
 ) {
+    @JsonProperty("isLiked")
+    public boolean isLiked() {
+        return likedByCurrentUser;
+    }
 }

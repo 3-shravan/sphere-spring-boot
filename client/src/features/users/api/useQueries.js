@@ -22,14 +22,14 @@ export const useGetProfile = (username) =>
 
 export const useFollowersQuery = (userId, page = 0) =>
   useQuery({
-    queryKey: [...USERS_QUERY_KEY.all(), userId, "followers", page],
+    queryKey: [...USERS_QUERY_KEY.all, userId, "followers", page],
     queryFn: () => usersApi.getFollowers(userId, page),
     enabled: !!userId,
   })
 
 export const useFollowingQuery = (userId, page = 0) =>
   useQuery({
-    queryKey: [...USERS_QUERY_KEY.all(), userId, "following", page],
+    queryKey: [...USERS_QUERY_KEY.all, userId, "following", page],
     queryFn: () => usersApi.getFollowing(userId, page),
     enabled: !!userId,
   })

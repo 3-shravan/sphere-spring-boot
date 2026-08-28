@@ -4,21 +4,16 @@ import org.springframework.stereotype.Service;
 
 /**
  * Central repository for all AI prompts.
- *
- * <strong>Rule:</strong> prompts must NEVER be hardcoded in controllers,
- * services, or provider classes. All prompts live here.
- *
+
  * Adding a new AI feature = adding a new method here. Existing methods
  * are never modified (Open/Closed Principle).
  */
 @Service
 public class PromptService {
 
-  // -----------------------------------------------------------------------
-  // Feature #1 — Image Caption Generation (IMPLEMENTED)
-  // -----------------------------------------------------------------------
-
+  
   /**
+   * Feature #1 — Image Caption Generation (IMPLEMENTED)
    * Returns the prompt used to generate a short, engaging social-media
    * caption from an image.
    */
@@ -52,32 +47,6 @@ public class PromptService {
         - Prefer short tags (1-2 words max).
         - Avoid duplicates and generic filler tags.
         - Output STRICT JSON array only, e.g. [\"sunset\",\"travel\",\"beach\"].
-        """;
-  }
-
-  // -----------------------------------------------------------------------
-  // Future feature placeholders — implement the method body when ready.
-  // -----------------------------------------------------------------------
-
-  /**
-   * Placeholder: returns a prompt for generating a short interesting joke.
-   * Future feature — not yet hooked into a controller.
-   */
-  public String jokePrompt() {
-    return """
-        Generate a single, short, family-friendly joke.
-        Output ONLY the joke text, nothing else.
-        """;
-  }
-
-  /**
-   * Placeholder: returns a prompt for generating an interesting fun fact.
-   * Future feature — not yet hooked into a controller.
-   */
-  public String funFactPrompt() {
-    return """
-        Generate a single interesting and surprising fun fact.
-        Output ONLY the fact text, nothing else.
         """;
   }
 

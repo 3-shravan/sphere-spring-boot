@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import { ProfilePicture } from "@/components"
 export const SearchedUser = ({ user }) => {
-  if(!user)return null
+  if (!user) return null
   const navigate = useNavigate()
   return (
     <div
@@ -13,7 +13,7 @@ export const SearchedUser = ({ user }) => {
         <h3 className="font-medium text-foreground text-sm">{user.name}</h3>
       </div>
       <span className="px-9 font-Gilroy font-bold text-[8px] text-muted-foreground uppercase">
-        Followers-{user?.followers?.length ||0}
+        Followers-{user?.followersCount ?? user?.followers?.length ?? 0}
       </span>
     </div>
   )

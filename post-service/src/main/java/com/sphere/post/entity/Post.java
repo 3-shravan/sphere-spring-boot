@@ -82,11 +82,6 @@ public class Post {
     @Builder.Default
     private List<String> tags = new ArrayList<>();
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "recent_likers")
-    @Builder.Default
-    private List<com.sphere.post.client.AuthorSummary> recentLikers = new ArrayList<>();
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

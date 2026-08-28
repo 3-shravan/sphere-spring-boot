@@ -7,7 +7,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -15,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.sphere.user.dto.request.UpdateProfileRequest;
+import com.sphere.user.dto.response.CountProjection;
 import com.sphere.user.dto.response.UserResponse;
+import com.sphere.user.dto.response.UserSummaryResponse;
 import com.sphere.user.entity.Gender;
 import com.sphere.user.entity.User;
 import com.sphere.user.entity.UserFollow;
@@ -29,10 +33,10 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Ports server/src/controllers/user.controller.js.
- * Status-code deviations from source (per your instruction to fix obvious
- * bugs rather than preserve them, documented here): none identified in the
- * user domain itself — the two known status-code bugs from the reverse-
- * engineering pass (comment-related) live in post-service, not here.
+ * Implements high-performance relationship architecture:
+ * - Direct JPQL Projections for paginated followers/following (O(1) database queries)
+ * - Batch aggregation and EXISTS checks for user lists (eliminating N+1)
+ * - Dynamic state and count calculation
  */
 @Service
 @RequiredArgsConstructor
@@ -48,26 +52,17 @@ public class UserService {
     // GET /users?search=
     // ---------------------------------------------------------------
 
+    @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers(Long currentUserId, String search) {
         List<User> users = userRepository.searchVerifiedUsers(search, List.of(-1L),
                 PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")));
-        return users.stream().map(this::toSummaryAsUserResponse).toList();
+        return toHydratedUserResponses(users, currentUserId);
     }
 
     // ---------------------------------------------------------------
     // GET /users/suggested
     // ---------------------------------------------------------------
 
-    /**
-     * Ports the two-stage recommender from user.controller.js#getSuggestedUsers:
-     * (1) mutual-connection scoring, (2) fallback newest-users.
-     *
-     * PERFORMANCE NOTE (flag for docs/improvements/RECOMMENDED_IMPROVEMENTS.md):
-     * this is implemented in application code over repository calls for a
-     * first-cut correct port; the source used a single Mongo aggregation
-     * pipeline. A follow-up should replace this with one indexed SQL query
-     * (self-join on user_follows) rather than N+1 lookups.
-     */
     @Transactional(readOnly = true)
     public List<UserResponse> getSuggestedUsers(Long currentUserId) {
         List<Long> followingIds = userFollowRepository.findByFollowerId(currentUserId).stream()
@@ -102,22 +97,21 @@ public class UserService {
                 excludeForFallback.isEmpty() ? List.of(-1L) : new ArrayList<>(excludeForFallback),
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
 
-        List<UserResponse> suggestions = new ArrayList<>();
-        mutualUsers.forEach(u -> suggestions.add(toSummaryAsUserResponse(u)));
-        fallbackUsers.forEach(u -> suggestions.add(toSummaryAsUserResponse(u)));
+        List<User> combined = new ArrayList<>(mutualUsers);
+        combined.addAll(fallbackUsers);
 
-        return suggestions;
+        return toHydratedUserResponses(combined, currentUserId);
     }
 
     // ---------------------------------------------------------------
     // GET /users/birthdays
     // ---------------------------------------------------------------
 
-    public List<UserResponse> getTodaysBirthdays() {
+    @Transactional(readOnly = true)
+    public List<UserResponse> getTodaysBirthdays(Long currentUserId) {
         LocalDate today = LocalDate.now();
-        return userRepository.findTodaysBirthdays(today.getDayOfMonth(), today.getMonthValue()).stream()
-                .map(this::toSummaryAsUserResponse)
-                .toList();
+        List<User> users = userRepository.findTodaysBirthdays(today.getDayOfMonth(), today.getMonthValue());
+        return toHydratedUserResponses(users, currentUserId);
     }
 
     // ---------------------------------------------------------------
@@ -199,14 +193,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    /**
-     * Ports deleteAccount — DELIBERATELY preserves the source's non-cascading
-     * behavior for now (Decision #5 in DECISIONS_REQUIRED.md is still open).
-     * Unlike the source's Mongo delete-result quirk (returning the raw
-     * `{acknowledged, deletedCount}` object as "user"), this returns nothing
-     * unusual — a documented, low-risk cleanup since no frontend consumer
-     * exists for this endpoint (docs/api/FRONTEND_API_CONTRACT.md).
-     */
     @Transactional
     public void deleteAccount(Long currentUserId) {
         if (!userRepository.existsById(currentUserId)) {
@@ -216,7 +202,7 @@ public class UserService {
     }
 
     // ---------------------------------------------------------------
-    // Follow / Block
+    // Follow / Unfollow
     // ---------------------------------------------------------------
 
     @Transactional
@@ -242,11 +228,24 @@ public class UserService {
     }
 
     // ---------------------------------------------------------------
-    // Helpers
+    // Dedicated Paginated Followers & Following APIs (Single JPQL Projection)
+    // ---------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public Page<UserSummaryResponse> getFollowers(Long userId, int page, int size) {
+        return userFollowRepository.findFollowersSummaryByFolloweeId(userId, PageRequest.of(page, size));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserSummaryResponse> getFollowing(Long userId, int page, int size) {
+        return userFollowRepository.findFollowingSummaryByFollowerId(userId, PageRequest.of(page, size));
+    }
+
+    // ---------------------------------------------------------------
+    // Helpers & Batch Hydration (Eliminates N+1 Queries)
     // ---------------------------------------------------------------
 
     private UserResponse toFullUserResponse(User user, Long currentUserId) {
-        UserResponse base = userMapper.toUserResponse(user);
         long followers = userFollowRepository.countByFolloweeId(user.getId());
         long following = userFollowRepository.countByFollowerId(user.getId());
         
@@ -255,33 +254,56 @@ public class UserService {
             isFollowing = userFollowRepository.existsByFollowerIdAndFolloweeId(currentUserId, user.getId());
         }
         
-        return new UserResponse(base.id(), base.name(), base.fullName(), base.email(), base.dob(),
-                base.profilePicture(), base.bio(), base.gender(), base.accountVerified(), followers, following,
+        return new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getDob(),
+                user.getProfilePictureUrl(),
+                user.getBio(),
+                user.getGender(),
+                user.isAccountVerified(),
+                followers,
+                following,
                 isFollowing,
-                base.createdAt(), base.updatedAt());
+                user.getCreatedAt(),
+                user.getUpdatedAt());
     }
 
-    @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<com.sphere.user.dto.response.UserSummaryResponse> getFollowers(Long userId, int page, int size) {
-        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(page, size);
-        return userFollowRepository.findByFolloweeId(userId, pageRequest)
-                .map(f -> userRepository.findById(f.getFollowerId()).map(userMapper::toSummary).orElse(null));
-    }
+    private List<UserResponse> toHydratedUserResponses(List<User> users, Long currentUserId) {
+        if (users == null || users.isEmpty()) {
+            return List.of();
+        }
 
-    @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<com.sphere.user.dto.response.UserSummaryResponse> getFollowing(Long userId, int page, int size) {
-        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(page, size);
-        return userFollowRepository.findByFollowerId(userId, pageRequest)
-                .map(f -> userRepository.findById(f.getFolloweeId()).map(userMapper::toSummary).orElse(null));
-    }
+        List<Long> userIds = users.stream().map(User::getId).toList();
 
-    // For list-style endpoints (search/suggested/birthdays) the source
-    // projects only a few fields (name/profilePicture/...); reusing the full
-    // UserResponse shape here (with counts omitted/zeroed) keeps one
-    // response type across the API rather than introducing a parallel DTO
-    // for a projection difference that costs little to just include.
-    private UserResponse toSummaryAsUserResponse(User user) {
-        return userMapper.toUserResponse(user);
+        Map<Long, Long> followersMap = userFollowRepository.countFollowersGrouped(userIds).stream()
+                .collect(Collectors.toMap(CountProjection::getTargetId, CountProjection::getCount));
+
+        Map<Long, Long> followingMap = userFollowRepository.countFollowingGrouped(userIds).stream()
+                .collect(Collectors.toMap(CountProjection::getTargetId, CountProjection::getCount));
+
+        Set<Long> followedIds = currentUserId != null
+                ? userFollowRepository.findFollowedIds(currentUserId, userIds)
+                : Set.of();
+
+        return users.stream().map(u -> new UserResponse(
+                u.getId(),
+                u.getUsername(),
+                u.getFullName(),
+                u.getEmail(),
+                u.getDob(),
+                u.getProfilePictureUrl(),
+                u.getBio(),
+                u.getGender(),
+                u.isAccountVerified(),
+                followersMap.getOrDefault(u.getId(), 0L),
+                followingMap.getOrDefault(u.getId(), 0L),
+                followedIds.contains(u.getId()),
+                u.getCreatedAt(),
+                u.getUpdatedAt()
+        )).toList();
     }
 
     private boolean isAtLeast13YearsOld(LocalDate dob) {

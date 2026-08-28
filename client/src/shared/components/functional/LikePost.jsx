@@ -91,7 +91,8 @@ const LikePost = forwardRef(({ postId, likesCount: initialLikesCount = 0, isLike
         <Modal darkModal={true}>
           <LikeModal 
             title="Liked by" 
-            users={recentLikers.map(u => ({ ...u, _id: u.id || u._id }))} 
+            type="likes"
+            postId={postId}
             onCancel={setShowModal} 
           />
         </Modal>

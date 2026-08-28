@@ -55,8 +55,8 @@ public class UserController {
     }
 
     @GetMapping("/birthdays")
-    public ResponseEntity<Map<String, Object>> getTodaysBirthdays() {
-        var users = userService.getTodaysBirthdays();
+    public ResponseEntity<Map<String, Object>> getTodaysBirthdays(@AuthenticationPrincipal User currentUser) {
+        var users = userService.getTodaysBirthdays(currentUser != null ? currentUser.getId() : null);
         return ResponseEntity.ok(ResponseUtil.success("Today's Birthdays", Map.of("users", users)));
     }
 

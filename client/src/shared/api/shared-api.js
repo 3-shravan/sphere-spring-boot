@@ -5,7 +5,11 @@ export const api = {
 
   getSinglePost: (postId) => fetcher({ endpoint: `/posts/${postId}`, publicApi: true }),
 
-  getSavedPosts: () => fetcher({ endpoint: `/posts/saved` }),
+  getPostLikes: (postId, page = 1, limit = 20) =>
+    fetcher({ endpoint: `/posts/${postId}/likes?page=${page}&limit=${limit}`, publicApi: true }),
+
+  getSavedPosts: (page = 1, limit = 10) =>
+    fetcher({ endpoint: `/posts/saved?page=${page}&limit=${limit}` }),
 
   likePost: (postId) => fetcher({ endpoint: `/posts/${postId}/like`, method: "PUT" }),
 

@@ -1,9 +1,14 @@
 package com.sphere.post.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -20,9 +25,12 @@ import com.sphere.post.dto.request.CreateThoughtRequest;
 import com.sphere.post.dto.request.UpdatePostRequest;
 import com.sphere.post.dto.response.AuthorResponse;
 import com.sphere.post.dto.response.FeedPageResponse;
+import com.sphere.post.dto.response.PostCountProjection;
 import com.sphere.post.dto.response.PostResponse;
 import com.sphere.post.entity.Post;
+import com.sphere.post.entity.PostLike;
 import com.sphere.post.entity.PostType;
+import com.sphere.post.entity.SavedPost;
 import com.sphere.post.exception.BadRequestException;
 import com.sphere.post.exception.NotFoundException;
 import com.sphere.post.repository.CommentRepository;
@@ -33,10 +41,11 @@ import com.sphere.post.repository.SavedPostRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Ports server/src/controllers/feed/post.controller.js. See class-level
- * notes in entity.Post for the author-denormalization tradeoff, and
- * docs/02-target-architecture.md for the Feign-based following/blocked
- * scoping (replaces the source's in-process Mongo array lookups).
+ * Ports server/src/controllers/feed/post.controller.js.
+ * Implements high-performance relationship architecture:
+ * - Zero embedded collections in entities or primary DTOs
+ * - Batch aggregation & EXISTS queries (eliminating N+1 queries in feeds)
+ * - Dedicated paginated APIs for relationships (likes, saved posts)
  */
 @Service
 @RequiredArgsConstructor
@@ -83,6 +92,7 @@ public class PostService {
         return toFeedPage(result, currentUserId);
     }
 
+    @Transactional(readOnly = true)
     public FeedPageResponse getUserPosts(Long currentUserId, Long targetUserId, int page, int limit) {
         Page<Post> result = postRepository.findByAuthorIdOrderByCreatedAtDesc(targetUserId,
                 PageRequest.of(page - 1, limit));
@@ -90,21 +100,27 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public List<PostResponse> getSavedPosts(Long currentUserId) {
-        List<Long> postIds = savedPostRepository.findPostIdsByUserId(currentUserId);
-        if (postIds.isEmpty())
-            return List.of();
-        List<Post> posts = postRepository.findAllById(postIds);
-        // Preserve savedPosts ordering (most-recently-saved first), matching source.
-        posts.sort((a, b) -> Integer.compare(postIds.indexOf(a.getId()), postIds.indexOf(b.getId())));
-        return posts.stream().map(p -> toPostResponse(p, currentUserId)).toList();
+    public FeedPageResponse getSavedPosts(Long currentUserId, int page, int limit) {
+        PageRequest pageRequest = PageRequest.of(page - 1, limit);
+        Page<SavedPost> savedPage = savedPostRepository.findByUserIdOrderByCreatedAtDesc(currentUserId, pageRequest);
+        
+        List<Long> postIds = savedPage.getContent().stream().map(SavedPost::getPostId).toList();
+        if (postIds.isEmpty()) {
+            return new FeedPageResponse(page, savedPage.getTotalPages(), savedPage.hasNext(), List.of());
+        }
+
+        List<Post> posts = new ArrayList<>(postRepository.findAllById(postIds));
+        posts.sort(Comparator.comparingInt(p -> postIds.indexOf(p.getId())));
+
+        List<PostResponse> hydrated = toHydratedPostResponses(posts, currentUserId);
+        return new FeedPageResponse(page, savedPage.getTotalPages(), savedPage.hasNext(), hydrated);
     }
 
     @Transactional(readOnly = true)
     public PostResponse getSinglePost(Long postId) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new NotFoundException("Post not found"));
         Long currentUserId = currentUserIdOrNull();
-        return toPostResponse(post, currentUserId);
+        return toSinglePostResponse(post, currentUserId);
     }
 
     // ---------------------------------------------------------------
@@ -132,11 +148,9 @@ public class PostService {
                 .build();
 
         postRepository.save(post);
-        // Warm the AI caption cache in the background (best-effort).
-        // If ai-service is down the fallback returns null and we continue.
         warmAiCaptionCache(uploaded.url());
         warmAiTagsCache(uploaded.url());
-        return toPostResponse(post, currentUserId);
+        return toSinglePostResponse(post, currentUserId);
     }
 
     @Transactional
@@ -150,7 +164,7 @@ public class PostService {
                 .thoughts(request.thoughts())
                 .build();
         postRepository.save(post);
-        return toPostResponse(post, currentUserId);
+        return toSinglePostResponse(post, currentUserId);
     }
 
     public record UpdatePostResult(PostResponse post, boolean changed) {
@@ -161,7 +175,7 @@ public class PostService {
             MultipartFile image) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new NotFoundException("Post not found"));
         if (!post.getAuthorId().equals(currentUserId)) {
-            throw new NotFoundException("Post not found"); // matches source: same 404 for not-found and not-owner
+            throw new NotFoundException("Post not found");
         }
         if (post.getPostType() == PostType.thought) {
             throw new BadRequestException("Thought posts cannot be updated this way.");
@@ -175,7 +189,7 @@ public class PostService {
                 && !hasNewImage;
 
         if (unchanged) {
-            return new UpdatePostResult(toPostResponse(post, currentUserId), false);
+            return new UpdatePostResult(toSinglePostResponse(post, currentUserId), false);
         }
 
         if (hasNewImage) {
@@ -195,7 +209,7 @@ public class PostService {
             post.setTags(newTags);
 
         postRepository.save(post);
-        return new UpdatePostResult(toPostResponse(post, currentUserId), true);
+        return new UpdatePostResult(toSinglePostResponse(post, currentUserId), true);
     }
 
     @Transactional
@@ -207,13 +221,11 @@ public class PostService {
         if (post.getMediaPublicId() != null) {
             cloudinaryService.delete(post.getMediaPublicId());
         }
-        // Comments cascade via the DB FK (comments.post_id ON DELETE CASCADE) —
-        // matches source's explicit Comment.deleteMany, done declaratively instead.
         postRepository.delete(post);
     }
 
     // ---------------------------------------------------------------
-    // Like / Save
+    // Like / Save (Dedicated Relational Tables)
     // ---------------------------------------------------------------
 
     @Transactional
@@ -223,35 +235,16 @@ public class PostService {
         boolean alreadyLiked = postLikeRepository.existsByPostIdAndUserId(postId, currentUserId);
         if (alreadyLiked) {
             postLikeRepository.deleteByPostIdAndUserId(postId, currentUserId);
-
-            if (post.getRecentLikers() != null) {
-                List<AuthorSummary> likers = new ArrayList<>(post.getRecentLikers());
-                likers.removeIf(l -> l.id().equals(currentUserId));
-                post.setRecentLikers(likers);
-                postRepository.save(post);
-            }
             return "Post unliked";
         }
 
-        com.sphere.post.entity.PostLike like = new com.sphere.post.entity.PostLike();
+        PostLike like = new PostLike();
         like.setPostId(postId);
         like.setUserId(currentUserId);
         postLikeRepository.save(like);
 
-        // Add to recentLikers (denormalization)
-        AuthorSummary liker = resolveAuthor(currentUserId);
-        List<AuthorSummary> likers = post.getRecentLikers() == null ? new ArrayList<>()
-                : new ArrayList<>(post.getRecentLikers());
-        likers.removeIf(l -> l.id().equals(currentUserId)); // prevent duplicates if bugged
-        likers.add(0, liker); // add to front (most recent)
-        if (likers.size() > 3) {
-            likers = likers.subList(0, 3);
-        }
-        post.setRecentLikers(likers);
-        postRepository.save(post);
-
-        // notification only on new-like, non-self — matches source
         if (!post.getAuthorId().equals(currentUserId)) {
+            AuthorSummary liker = resolveAuthor(currentUserId);
             notificationPublisher.publishLikeNotification(post.getAuthorId(), currentUserId, liker.name());
         }
         return "Post liked \u2764";
@@ -267,7 +260,7 @@ public class PostService {
             savedPostRepository.deleteByUserIdAndPostId(currentUserId, postId);
             return "Post unsaved.";
         }
-        com.sphere.post.entity.SavedPost saved = new com.sphere.post.entity.SavedPost();
+        SavedPost saved = new SavedPost();
         saved.setUserId(currentUserId);
         saved.setPostId(postId);
         savedPostRepository.save(saved);
@@ -275,17 +268,30 @@ public class PostService {
     }
 
     // ---------------------------------------------------------------
-    // Helpers
+    // Dedicated Paginated Likes Listing API
     // ---------------------------------------------------------------
 
-    Post requirePost(Long postId) {
-        return postRepository.findById(postId).orElseThrow(() -> new NotFoundException("Post not found"));
+    @Transactional(readOnly = true)
+    public Page<AuthorSummary> getPostLikes(Long postId, int page, int limit) {
+        if (!postRepository.existsById(postId)) {
+            throw new NotFoundException("Post not found");
+        }
+        PageRequest pageRequest = PageRequest.of(page - 1, limit);
+        Page<PostLike> likesPage = postLikeRepository.findByPostIdOrderByCreatedAtDesc(postId, pageRequest);
+        
+        List<AuthorSummary> authors = likesPage.getContent().stream()
+                .map(l -> resolveAuthor(l.getUserId()))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        return new PageImpl<>(authors, pageRequest, likesPage.getTotalElements());
     }
 
+    // ---------------------------------------------------------------
+    // Helpers & Batch Hydration (Eliminates N+1 Queries)
+    // ---------------------------------------------------------------
+
     AuthorSummary resolveAuthor(Long userId) {
-        // Fallback behavior (NotFoundException on failure, or empty lists
-        // for scope-narrowing calls) is handled centrally by
-        // UserServiceClientFallbackFactory — no try/catch needed here.
         return userServiceClient.getAuthorSummary(userId);
     }
 
@@ -298,16 +304,56 @@ public class PostService {
     }
 
     private FeedPageResponse toFeedPage(Page<Post> page, Long currentUserId) {
-        List<PostResponse> posts = page.getContent().stream().map(p -> toPostResponse(p, currentUserId)).toList();
-        return new FeedPageResponse(page.getNumber() + 1, page.getTotalPages(), page.hasNext(), posts);
+        List<PostResponse> hydratedPosts = toHydratedPostResponses(page.getContent(), currentUserId);
+        return new FeedPageResponse(page.getNumber() + 1, page.getTotalPages(), page.hasNext(), hydratedPosts);
     }
 
-    PostResponse toPostResponse(Post post, Long currentUserId) {
+    private List<PostResponse> toHydratedPostResponses(List<Post> posts, Long currentUserId) {
+        if (posts == null || posts.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> postIds = posts.stream().map(Post::getId).toList();
+
+        Map<Long, Long> likesMap = postLikeRepository.countLikesByPostIds(postIds).stream()
+                .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCount));
+
+        Map<Long, Long> commentsMap = commentRepository.countCommentsByPostIds(postIds).stream()
+                .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCount));
+
+        Set<Long> likedPostIds = currentUserId != null
+                ? postLikeRepository.findLikedPostIdsByUserId(currentUserId, postIds)
+                : Set.of();
+
+        Set<Long> savedPostIds = currentUserId != null
+                ? savedPostRepository.findSavedPostIdsByUserId(currentUserId, postIds)
+                : Set.of();
+
+        return posts.stream().map(p -> new PostResponse(
+                p.getId(),
+                new AuthorResponse(p.getAuthorId(), p.getAuthorName(), p.getAuthorProfilePicture()),
+                p.getPostType(),
+                p.getThoughts(),
+                p.getCaption(),
+                p.getMediaUrl(),
+                p.getLocation(),
+                p.getTags(),
+                likesMap.getOrDefault(p.getId(), 0L),
+                likedPostIds.contains(p.getId()),
+                commentsMap.getOrDefault(p.getId(), 0L),
+                currentUserId != null ? savedPostIds.contains(p.getId()) : null,
+                p.getCreatedAt(),
+                p.getUpdatedAt()
+        )).toList();
+    }
+
+    private PostResponse toSinglePostResponse(Post post, Long currentUserId) {
         long likes = postLikeRepository.countByPostId(post.getId());
         long comments = commentRepository.countByPostId(post.getId());
         boolean liked = currentUserId != null
                 && postLikeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
-        Boolean saved = currentUserId != null ? savedPostRepository.existsByUserIdAndPostId(currentUserId, post.getId())
+        Boolean saved = currentUserId != null
+                ? savedPostRepository.existsByUserIdAndPostId(currentUserId, post.getId())
                 : null;
 
         return new PostResponse(
@@ -323,7 +369,6 @@ public class PostService {
                 liked,
                 comments,
                 saved,
-                post.getRecentLikers(),
                 post.getCreatedAt(),
                 post.getUpdatedAt());
     }
@@ -351,30 +396,19 @@ public class PostService {
         return java.util.Objects.equals(a, b);
     }
 
-    /**
-     * Best-effort: warm ai-service caption cache after a post image is uploaded.
-     * Failure is silently swallowed — caption generation never blocks post
-     * creation.
-     */
     private void warmAiCaptionCache(String imageUrl) {
         try {
             aiServiceClient.getCaptionForImage(imageUrl);
         } catch (Exception e) {
-            // ai-service unavailable or caption generation failed — safe to ignore
             org.slf4j.LoggerFactory.getLogger(PostService.class)
                     .warn("AI caption cache warm-up skipped for imageUrl={} reason={}", imageUrl, e.getMessage());
         }
     }
 
-    /**
-     * Best-effort: warm ai-service tags cache after a post image is uploaded.
-     * Failure is silently swallowed — tag generation never blocks post creation.
-     */
     private void warmAiTagsCache(String imageUrl) {
         try {
             aiServiceClient.getTagsForImage(imageUrl);
         } catch (Exception e) {
-            // ai-service unavailable or tag generation failed — safe to ignore
             org.slf4j.LoggerFactory.getLogger(PostService.class)
                     .warn("AI tags cache warm-up skipped for imageUrl={} reason={}", imageUrl, e.getMessage());
         }
