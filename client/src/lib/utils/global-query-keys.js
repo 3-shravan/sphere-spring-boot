@@ -12,16 +12,23 @@ export const POSTS_QUERY_KEYS = {
   profiles: () => [...POSTS_QUERY_KEYS.all, "profiles"],
   profile: (userId) => [...POSTS_QUERY_KEYS.profiles(), { userId }],
 
+  // --- SEMANTIC SEARCH ---
+  semanticSearch: (query = "") => [
+    ...POSTS_QUERY_KEYS.all,
+    "semantic-search",
+    { query },
+  ],
+
   // --- INDIVIDUAL POST DETAIL ---
   details: () => [...POSTS_QUERY_KEYS.all, "detail"],
   detail: (id) => [...POSTS_QUERY_KEYS.details(), { id }],
-}
+};
 
 export const USERS_QUERY_KEY = {
   all: ["users"],
   suggested: () => [...USERS_QUERY_KEY.all, "suggested-users"],
   profile: (username) => [...USERS_QUERY_KEY.all, "profile", { username }],
-}
+};
 
 /*
  

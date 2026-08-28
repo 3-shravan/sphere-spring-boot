@@ -1,5 +1,7 @@
 package com.sphere.post.client;
 
+import java.util.Map;
+
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,4 +34,10 @@ public interface AiServiceClient {
    */
   @GetMapping("/tags")
   TagResult getTagsForImage(@RequestParam("imageUrl") String imageUrl);
+
+  /**
+   * Expands free-text search query into semantic terms.
+   */
+  @GetMapping("/misc/semantic-query")
+  Map<String, Object> expandSemanticQuery(@RequestParam("query") String query);
 }

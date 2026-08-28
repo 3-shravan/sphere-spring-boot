@@ -2,8 +2,10 @@ package com.sphere.post.service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -99,11 +101,53 @@ public class PostService {
         return toFeedPage(result, currentUserId);
     }
 
+    public record SemanticSearchPageResponse(
+            int currentPage,
+            int totalPages,
+            boolean hasMore,
+            List<PostResponse> posts,
+            List<String> semanticTerms) {
+    }
+
+    @Transactional(readOnly = true)
+    public SemanticSearchPageResponse semanticSearchPosts(Long currentUserId, String query, int page, int limit) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        if (normalizedQuery.isBlank()) {
+            return new SemanticSearchPageResponse(page, 0, false, List.of(), List.of());
+        }
+
+        List<Long> blocked = safeBlockedIds(currentUserId);
+        Page<Post> candidatePage = postRepository.findGlobalFeed(
+                blocked.isEmpty() ? NONE : blocked,
+                PageRequest.of(0, 300));
+
+        List<String> semanticTerms = buildSemanticTerms(normalizedQuery);
+
+        List<Post> ranked = candidatePage.getContent().stream()
+                .map(post -> new ScoredPost(post, scorePost(post, semanticTerms)))
+                .filter(scored -> scored.score() > 0)
+                .sorted(Comparator
+                        .comparingInt(ScoredPost::score).reversed()
+                        .thenComparing(sp -> sp.post().getCreatedAt(), Comparator.reverseOrder()))
+                .map(ScoredPost::post)
+                .toList();
+
+        int total = ranked.size();
+        int totalPages = total == 0 ? 0 : (int) Math.ceil((double) total / limit);
+        int fromIndex = Math.max(0, (page - 1) * limit);
+        int toIndex = Math.min(total, fromIndex + limit);
+
+        List<Post> slice = fromIndex >= total ? List.of() : ranked.subList(fromIndex, toIndex);
+        List<PostResponse> hydrated = toHydratedPostResponses(slice, currentUserId);
+
+        return new SemanticSearchPageResponse(page, totalPages, page < totalPages, hydrated, semanticTerms);
+    }
+
     @Transactional(readOnly = true)
     public FeedPageResponse getSavedPosts(Long currentUserId, int page, int limit) {
         PageRequest pageRequest = PageRequest.of(page - 1, limit);
         Page<SavedPost> savedPage = savedPostRepository.findByUserIdOrderByCreatedAtDesc(currentUserId, pageRequest);
-        
+
         List<Long> postIds = savedPage.getContent().stream().map(SavedPost::getPostId).toList();
         if (postIds.isEmpty()) {
             return new FeedPageResponse(page, savedPage.getTotalPages(), savedPage.hasNext(), List.of());
@@ -278,7 +322,7 @@ public class PostService {
         }
         PageRequest pageRequest = PageRequest.of(page - 1, limit);
         Page<PostLike> likesPage = postLikeRepository.findByPostIdOrderByCreatedAtDesc(postId, pageRequest);
-        
+
         List<AuthorSummary> authors = likesPage.getContent().stream()
                 .map(l -> resolveAuthor(l.getUserId()))
                 .filter(java.util.Objects::nonNull)
@@ -343,8 +387,7 @@ public class PostService {
                 commentsMap.getOrDefault(p.getId(), 0L),
                 currentUserId != null ? savedPostIds.contains(p.getId()) : null,
                 p.getCreatedAt(),
-                p.getUpdatedAt()
-        )).toList();
+                p.getUpdatedAt())).toList();
     }
 
     private PostResponse toSinglePostResponse(Post post, Long currentUserId) {
@@ -394,6 +437,89 @@ public class PostService {
 
     private boolean eq(Object a, Object b) {
         return java.util.Objects.equals(a, b);
+    }
+
+    private List<String> buildSemanticTerms(String query) {
+        LinkedHashSet<String> terms = new LinkedHashSet<>(tokenize(query));
+        try {
+            Map<String, Object> expanded = aiServiceClient.expandSemanticQuery(query);
+            if (expanded != null) {
+                Object normalized = expanded.get("normalizedQuery");
+                if (normalized instanceof String normalizedText) {
+                    terms.addAll(tokenize(normalizedText));
+                }
+                Object fromAi = expanded.get("terms");
+                if (fromAi instanceof List<?> list) {
+                    list.stream()
+                            .filter(String.class::isInstance)
+                            .map(String.class::cast)
+                            .map(this::normalizeToken)
+                            .filter(t -> !t.isBlank())
+                            .forEach(terms::add);
+                }
+            }
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(PostService.class)
+                    .warn("AI semantic expansion failed for query={} reason={}", query, e.getMessage());
+        }
+        return terms.stream().limit(14).toList();
+    }
+
+    private List<String> tokenize(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(text.split("\\s+"))
+                .map(this::normalizeToken)
+                .filter(token -> token.length() > 1)
+                .toList();
+    }
+
+    private String normalizeToken(String value) {
+        String token = value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
+        token = token.replaceAll("[^a-z0-9_-]", "");
+        return token;
+    }
+
+    private int scorePost(Post post, List<String> terms) {
+        if (terms.isEmpty()) {
+            return 0;
+        }
+
+        String caption = lower(post.getCaption());
+        String thoughts = lower(post.getThoughts());
+        String location = lower(post.getLocation());
+        String author = lower(post.getAuthorName());
+        List<String> tags = post.getTags() == null ? List.of()
+                : post.getTags().stream().map(this::lower).toList();
+
+        int score = 0;
+        for (String term : terms) {
+            if (caption.contains(term)) {
+                score += 5;
+            }
+            if (thoughts.contains(term)) {
+                score += 4;
+            }
+            if (location.contains(term)) {
+                score += 3;
+            }
+            if (author.contains(term)) {
+                score += 2;
+            }
+            boolean tagMatch = tags.stream().anyMatch(t -> t.contains(term));
+            if (tagMatch) {
+                score += 6;
+            }
+        }
+        return score;
+    }
+
+    private String lower(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
+    }
+
+    private record ScoredPost(Post post, int score) {
     }
 
     private void warmAiCaptionCache(String imageUrl) {

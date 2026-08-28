@@ -4,14 +4,13 @@ import org.springframework.stereotype.Service;
 
 /**
  * Central repository for all AI prompts.
-
+ * 
  * Adding a new AI feature = adding a new method here. Existing methods
  * are never modified (Open/Closed Principle).
  */
 @Service
 public class PromptService {
 
-  
   /**
    * Feature #1 — Image Caption Generation (IMPLEMENTED)
    * Returns the prompt used to generate a short, engaging social-media
@@ -48,6 +47,27 @@ public class PromptService {
         - Avoid duplicates and generic filler tags.
         - Output STRICT JSON array only, e.g. [\"sunset\",\"travel\",\"beach\"].
         """;
+  }
+
+  /**
+   * Prompt for expanding a user search phrase into semantic keywords.
+   */
+  public String semanticQueryExpansionPrompt(String query) {
+    return """
+        You are a semantic search query expander for a social media app.
+        Given the user query, return conceptually related search terms.
+
+        User query: "%s"
+
+        Rules:
+        - Return STRICT JSON object only.
+        - JSON format: {"normalizedQuery":"...","terms":["term1","term2",...]}.
+        - Include 6 to 12 short terms.
+        - Terms should represent meaning-based variants and related concepts.
+        - Lowercase terms only.
+        - No duplicates.
+        - No explanation text.
+        """.formatted(query);
   }
 
   /**

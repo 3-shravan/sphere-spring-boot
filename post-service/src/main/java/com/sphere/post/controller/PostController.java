@@ -92,6 +92,22 @@ public class PostController {
                 "hasMore", feed.hasMore(), "posts", feed.posts())));
     }
 
+    @GetMapping("/search/semantic")
+    @Operation(description = "Meaning-based post search powered by AI query expansion + ranking.")
+    public ResponseEntity<Map<String, Object>> semanticSearchPosts(
+            @AuthenticationPrincipal Long currentUserId,
+            @RequestParam("q") String query,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int limit) {
+        var result = postService.semanticSearchPosts(currentUserId, query, page, limit);
+        return ResponseEntity.ok(ResponseUtil.success("Semantic posts fetched successfully", Map.of(
+                "currentPage", result.currentPage(),
+                "totalPages", result.totalPages(),
+                "hasMore", result.hasMore(),
+                "posts", result.posts(),
+                "semanticTerms", result.semanticTerms())));
+    }
+
     @GetMapping("/{postId}")
     @Operation(security = {}, description = "Public — no auth required. If a token IS supplied, the response includes isSaved for that viewer.")
     public ResponseEntity<Map<String, Object>> getSinglePost(@PathVariable Long postId) {

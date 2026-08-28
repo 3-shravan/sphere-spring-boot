@@ -1,5 +1,8 @@
 package com.sphere.post.client;
 
+import java.util.List;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.openfeign.FallbackFactory;
@@ -27,6 +30,11 @@ public class AiServiceClientFallbackFactory implements FallbackFactory<AiService
       @Override
       public TagResult getTagsForImage(String imageUrl) {
         return null;
+      }
+
+      @Override
+      public Map<String, Object> expandSemanticQuery(String query) {
+        return Map.of("normalizedQuery", query == null ? "" : query, "terms", List.of());
       }
     };
   }
